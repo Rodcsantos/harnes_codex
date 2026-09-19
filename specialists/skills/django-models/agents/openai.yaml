@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django Models"
+  short_description: "Design models, constraints, indexes, managers, and invariants ar"
+  default_prompt: "Use $django-models to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
