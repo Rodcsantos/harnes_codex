@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django Auth Permissions"
+  short_description: "Implement authentication plus action/object-level authorization"
+  default_prompt: "Use $django-auth-permissions to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
