@@ -997,3 +997,430 @@ Para Skills críticas ao projeto, a opção mais reprodutível continua sendo in
 ### Não existe um `codex skill install` genérico documentado
 
 Vale corrigir um detalhe da sua especificação. Nas interfaces oficiais atuais que pesquisei, o fluxo é:
+
+```text
+$skill-installer       # Skill installer interno Codex
+
+npx skills add ...     # Ecossistema Agent Skills/skills.sh
+
+codex plugin ...       # Plugin Codex
+
+/plugins               # Browser de Plugins
+```
+
+Não encontrei um comando oficial documentado do tipo:
+
+```bash
+codex skill install ...
+```
+
+Portanto eu não o colocaria em scripts. A documentação oficial atual orienta Skills e Plugins pelos mecanismos acima. ### Bootstrap WSL completo
+
+Este script deliberadamente **não sobrescreve um `~/.codex/config.toml` existente**.
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "== Codex Python/Django/ETL harness bootstrap =="
+
+# ---------------------------------------------------------
+# Prerequisites
+# ---------------------------------------------------------
+
+for cmd in git node npm npx python3; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "ERRO: '$cmd' não encontrado no PATH."
+        exit 1
+    fi
+done
+
+mkdir -p \
+    "$HOME/.agents/skills" \
+    "$HOME/.codex" \
+    "$HOME/.local/bin" \
+    "$HOME/.config/codex-harness"
+
+# ---------------------------------------------------------
+# Python tool manager
+# ---------------------------------------------------------
+
+if ! command -v pipx >/dev/null 2>&1; then
+    python3 -m pip install --user --upgrade pipx
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    pipx install uv
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# ---------------------------------------------------------
+# Developer tooling
+# ---------------------------------------------------------
+
+uv tool install ruff      2>/dev/null || uv tool upgrade ruff
+uv tool install pre-commit 2>/dev/null || uv tool upgrade pre-commit
+uv tool install bandit    2>/dev/null || uv tool upgrade bandit
+uv tool install pip-audit 2>/dev/null || uv tool upgrade pip-audit
+
+if ! command -v pyright >/dev/null 2>&1; then
+    npm install -g pyright
+fi
+
+# ---------------------------------------------------------
+# Skills: Superpowers
+# ---------------------------------------------------------
+
+npx -y skills add obra/superpowers \
+    --skill systematic-debugging \
+    --skill test-driven-development \
+    --skill requesting-code-review \
+    --skill verification-before-completion \
+    --skill subagent-driven-development \
+    --skill finishing-a-development-branch \
+    --agent codex \
+    --global \
+    --yes
+
+# ---------------------------------------------------------
+# Skill: refactoring
+# ---------------------------------------------------------
+
+npx -y skills add mattpocock/skills \
+    --skill request-refactor-plan \
+    --agent codex \
+    --global \
+    --yes
+
+# ---------------------------------------------------------
+# Skills: Django
+# ---------------------------------------------------------
+
+npx -y skills add vintasoftware/django-ai-plugins \
+    --skill django-expert \
+    --skill django-reviewer \
+    --skill django-safe-migration \
+    --agent codex \
+    --global \
+    --yes
+
+# ---------------------------------------------------------
+# Skills: Hermes -> Codex
+# Review these SKILL.md files after install because they may
+# assume Hermes-specific tool vocabulary.
+# ---------------------------------------------------------
+
+if ! npx -y skills add NousResearch/hermes-agent \
+    --skill python-debugpy \
+    --skill codebase-inspection \
+    --agent codex \
+    --global \
+    --yes; then
+    echo "WARN: skills Hermes não foram instaladas automaticamente."
+    echo "Faça adaptação/cópia manual dos SKILL.md correspondentes."
+fi
+
+# ---------------------------------------------------------
+# Skills: ETL
+# ---------------------------------------------------------
+
+npx -y skills add vaquarkhan/data-engineering-agent-skills \
+    --skill python-data-engineering-and-pipeline-packaging \
+    --skill airflow-and-workflow-orchestration \
+    --agent codex \
+    --global \
+    --yes
+
+# ---------------------------------------------------------
+# Skill: security
+# ---------------------------------------------------------
+
+npx -y skills add semgrep/skills \
+    --skill semgrep \
+    --agent codex \
+    --global \
+    --yes
+
+# ---------------------------------------------------------
+# Recommended Codex config
+# Never overwrite existing config automatically.
+# ---------------------------------------------------------
+
+cat > "$HOME/.config/codex-harness/recommended-config.toml" <<'TOML'
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+default_subagent_reasoning_effort = "medium"
+
+[features]
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
+disable_on_external_context = false
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[mcp_servers.github]
+url = "https://api.githubcopilot.com/mcp/"
+bearer_token_env_var = "GITHUB_PAT_TOKEN"
+TOML
+
+if [[ ! -f "$HOME/.codex/config.toml" ]]; then
+    cp \
+      "$HOME/.config/codex-harness/recommended-config.toml" \
+      "$HOME/.codex/config.toml"
+
+    echo "Criado ~/.codex/config.toml"
+else
+    echo
+    echo "Config Codex existente preservada."
+    echo "Mescle manualmente:"
+    echo "  ~/.config/codex-harness/recommended-config.toml"
+fi
+
+# ---------------------------------------------------------
+# Verification
+# ---------------------------------------------------------
+
+echo
+echo "== Skills detectadas =="
+npx -y skills list --global --agent codex || true
+
+echo
+echo "== Toolchain =="
+ruff --version || true
+pyright --version || true
+pre-commit --version || true
+
+if command -v codex >/dev/null 2>&1; then
+    echo
+    echo "== MCP =="
+    codex mcp list || true
+fi
+
+echo
+echo "Bootstrap concluído."
+echo
+echo "Próximos checks dentro do Codex:"
+echo "  /skills"
+echo "  /mcp"
+echo "  /memories"
+```
+
+### Configuração de projeto que eu adicionaria a todo Django/ETL
+
+Estrutura:
+
+```text
+project/
+├── AGENTS.md
+├── pyproject.toml
+├── .pre-commit-config.yaml
+├── .codex/
+│   ├── config.toml
+│   ├── hooks.json
+│   └── hooks/
+│       ├── pre_tool_use_policy.py
+│       └── post_tool_use_quality.py
+├── .agents/
+│   └── skills/
+│       └── project-specific/
+├── .github/
+│   └── workflows/
+│       └── quality.yml
+└── docs/
+    ├── architecture.md
+    ├── data-contracts.md
+    └── agent-playbook.md
+```
+
+Projeto-local é particularmente valioso porque a configuração Codex de repositório e Hooks pode ser vinculada à noção de **trusted project**, reduzindo o risco de um repositório desconhecido executar automações locais sem sua intenção. ## Arquitetura final recomendada
+
+O ponto mais importante da pesquisa é que **o melhor harness Codex não é “o Codex com o maior número de Skills”**.
+
+Eu montaria exatamente estas camadas:
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│                      Codex CLI                           │
+│                    runtime principal                     │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ AGENTS.md                                                │
+│ └─ regras estáveis, arquitetura, comandos, DoD           │
+│                                                          │
+│ Skills                                                   │
+│ ├─ Superpowers: método de engenharia                     │
+│ ├─ Vinta: domínio Django                                 │
+│ ├─ Data Engineering: domínio ETL                         │
+│ ├─ Hermes adaptadas: debugpy + codebase inspection      │
+│ └─ Semgrep: segurança                                   │
+│                                                          │
+│ Subagents                                                │
+│ ├─ implementer                                           │
+│ ├─ correctness reviewer                                  │
+│ ├─ Django/Python reviewer                                │
+│ ├─ security reviewer                                     │
+│ └─ performance reviewer                                  │
+│                                                          │
+│ MCP                                                      │
+│ ├─ GitHub       → PR / Issues / Actions                  │
+│ ├─ Context7     → documentação atual                     │
+│ ├─ Playwright   → browser interativo, quando necessário │
+│ └─ Memory       → Redis/Milvus/Pinecone opcional        │
+│                                                          │
+│ Hooks                                                    │
+│ ├─ PreToolUse   → política / bloqueios                   │
+│ ├─ PostToolUse  → feedback rápido                        │
+│ └─ Stop         → verification gate                      │
+│                                                          │
+│ Memories                                                 │
+│ ├─ Codex native → memória pessoal                        │
+│ └─ vector MCP   → conhecimento semântico opcional        │
+└──────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────────┐
+│                  Toolchain determinístico                │
+│ Ruff │ Pyright │ debugpy │ pytest │ Semgrep │ Bandit    │
+└──────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────────┐
+│                    pre-commit/push                       │
+└──────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────────┐
+│                     GitHub CI                            │
+│       autoridade final para qualidade e merge            │
+└──────────────────────────────────────────────────────────┘
+```
+
+E o workflow diário ficaria:
+
+```text
+Você:
+"corrija este problema"
+
+        ↓
+
+codebase-inspection
+        ↓
+systematic-debugging
+        ↓
+debugpy quando necessário
+        ↓
+test-driven-development
+        ↓
+implementação
+        ↓
+Ruff/Pyright via hooks
+        ↓
+subagents de review em paralelo
+        ↓
+requesting-code-review
+        ↓
+Semgrep/security se aplicável
+        ↓
+verification-before-completion
+        ↓
+pre-push
+        ↓
+GitHub Actions
+        ↓
+PR
+```
+
+Para Django:
+
+```text
+django-expert
+     +
+django-safe-migration
+     +
+django-reviewer
+     +
+Superpowers methodology
+```
+
+Para ETL:
+
+```text
+python-data-engineering-and-pipeline-packaging
+     +
+airflow-and-workflow-orchestration
+     +
+systematic-debugging
+     +
+TDD / contract tests
+     +
+data-observability MCP quando necessário
+```
+
+Para bugs realmente desagradáveis:
+
+```text
+codebase-inspection
+        ↓
+systematic-debugging
+        ↓
+python-debugpy
+        ↓
+hipótese comprovada
+        ↓
+teste de regressão
+        ↓
+correção mínima
+        ↓
+verification-before-completion
+```
+
+Para refactors grandes:
+
+```text
+request-refactor-plan
+        ↓
+writing/planning
+        ↓
+subagent-driven-development
+        ↓
+reviewers paralelos
+        ↓
+Ruff + Pyright + tests
+        ↓
+finishing-a-development-branch
+```
+
+A conclusão prática da pesquisa é que o **Hermes continua ganhando na sensação de “bateria incluída”**, mas o Codex atual já tem as primitives necessárias para construir um harness ainda mais forte: Skills abertas, Plugins, MCP, Hooks lifecycle, subagentes e memória local. A vantagem passa a ser selecionar as melhores ideias de Superpowers, Vinta, Hermes e ecossistema Agent Skills, colocando **comportamento probabilístico em Skills e comportamento obrigatório em Hooks/linters/CI**. Para o seu perfil de **Python/Django/ETL no WSL**, eu classificaria a prioridade final assim:
+
+| Prioridade | Componente | Valor |
+|---|---|---:|
+| P0 | `AGENTS.md` bem escrito | ★★★★★ |
+| P0 | `systematic-debugging` | ★★★★★ |
+| P0 | `test-driven-development` | ★★★★★ |
+| P0 | `django-expert` | ★★★★★ |
+| P0 | Ruff + Pyright + pytest | ★★★★★ |
+| P0 | GitHub MCP | ★★★★★ |
+| P0 | Context7 MCP | ★★★★★ |
+| P1 | `requesting-code-review` | ★★★★★ |
+| P1 | `verification-before-completion` | ★★★★★ |
+| P1 | `django-reviewer` | ★★★★★ |
+| P1 | `python-debugpy` adaptada | ★★★★☆ |
+| P1 | `codebase-inspection` adaptada | ★★★★☆ |
+| P1 | Codex lifecycle Hooks | ★★★★★ |
+| P1 | subagent review fan-out | ★★★★★ |
+| P1 | Semgrep Skills/SAST | ★★★★☆ |
+| P2 | ETL/Airflow Skills | ★★★★☆ |
+| P2 | Codex Memories | ★★★★☆ |
+| P2 | Playwright MCP | ★★★☆☆ |
+| P3 | Redis semantic memory | ★★★☆☆ |
+| P3 | Milvus/Pinecone | ★★☆☆☆ até haver escala que justifique |
+
+O maior salto, portanto, não virá de instalar mais 50 Skills. Virá de consolidar essas **15 Skills**, os **dois MCPs essenciais (GitHub + Context7)**, **Ruff/Pyright/debugpy/pytest**, **Hooks Codex**, **pre-commit/CI**, **subagentes especializados** e depois empacotar o conjunto em **um Plugin Codex seu**. Isso transforma o Codex de um “agente que sabe programar” em um **harness de engenharia reproduzível**.
