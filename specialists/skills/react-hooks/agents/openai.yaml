@@ -1,0 +1,6 @@
+interface:
+  display_name: "React Hooks"
+  short_description: "Use hooks with correct lifecycle, dependencies, cancellation, an"
+  default_prompt: "Use $react-hooks to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
