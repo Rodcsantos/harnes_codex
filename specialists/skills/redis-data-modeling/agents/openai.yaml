@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Data Modeling"
+  short_description: "Choose Redis structures, key naming, cardinality, serialization,"
+  default_prompt: "Use $redis-data-modeling to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

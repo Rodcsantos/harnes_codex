@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Cache Design"
+  short_description: "Design cache-aside/read-through patterns, TTLs, stampede control"
+  default_prompt: "Use $redis-cache-design to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
