@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL Transactions and Locks"
+  short_description: "Diagnose InnoDB locks, deadlocks, isolation, transaction scope,"
+  default_prompt: "Use $mysql-transactions-locking to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

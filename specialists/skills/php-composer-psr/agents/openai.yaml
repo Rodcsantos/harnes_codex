@@ -1,0 +1,6 @@
+interface:
+  display_name: "Composer and PSR"
+  short_description: "Manage Composer dependencies, autoloading, scripts, and PSR inte"
+  default_prompt: "Use $php-composer-psr to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

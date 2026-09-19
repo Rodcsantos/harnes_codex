@@ -1,0 +1,6 @@
+interface:
+  display_name: "PHP Architecture"
+  short_description: "Design services, domain boundaries, repositories, and dependency"
+  default_prompt: "Use $php-architecture to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

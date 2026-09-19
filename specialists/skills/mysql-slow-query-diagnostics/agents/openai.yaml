@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL Slow Query Diagnostics"
+  short_description: "Use slow log and Performance Schema to rank and investigate expe"
+  default_prompt: "Use $mysql-slow-query-diagnostics to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
