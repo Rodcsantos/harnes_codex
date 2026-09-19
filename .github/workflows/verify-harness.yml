@@ -1,0 +1,53 @@
+name: verify-harness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate shell syntax
+        run: |
+          bash -n scripts/install-codex-efficient-stack.sh
+          bash -n scripts/install-specialists.sh
+          bash -n scripts/verify.sh
+          bash -n specialists/install.sh
+          bash -n specialists/uninstall.sh
+
+      - name: Validate agents and skills
+        run: python3 specialists/verify.py specialists
+
+      - name: Validate recovered manifest
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("specialists")
+          manifest = json.loads((root / "manifest.json").read_text())
+
+          skills = {p.name for p in (root / "skills").iterdir() if p.is_dir()}
+          agents = {p.name for p in (root / "agents").glob("*.toml")}
+
+          assert len(manifest["skills"]) == 65, len(manifest["skills"])
+          assert len(manifest["agents"]) == 8, len(manifest["agents"])
+          assert set(manifest["skills"]) == skills, (set(manifest["skills"]) ^ skills)
+          assert set(manifest["agents"]).issubset(agents)
+          assert "infra-expert.toml" in agents
+
+          skill_docs = list((root / "skills").glob("*/SKILL.md"))
+          skill_meta = list((root / "skills").glob("*/agents/openai.yaml"))
+          assert len(skill_docs) == 65, len(skill_docs)
+          assert len(skill_meta) == 65, len(skill_meta)
+
+          print(f"OK: {len(agents)} agents, {len(skill_docs)} skills, manifest preserved")
+          PY
