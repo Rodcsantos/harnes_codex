@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL EXPLAIN ANALYZE"
+  short_description: "Read EXPLAIN (ANALYZE, BUFFERS) safely and interpret timing, row"
+  default_prompt: "Use $postgres-explain-analyze to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

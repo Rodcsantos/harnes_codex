@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Backup PITR Replication"
+  short_description: "Design base backups, WAL archiving, PITR, replicas, lag monitori"
+  default_prompt: "Use $postgres-backup-pitr-replication to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

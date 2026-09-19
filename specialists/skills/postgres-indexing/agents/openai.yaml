@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Indexing"
+  short_description: "Choose B-tree, partial, expression, GIN/GiST/BRIN and INCLUDE in"
+  default_prompt: "Use $postgres-indexing to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

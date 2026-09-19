@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Observability Security"
+  short_description: "Use pg_stat views, pg_stat_statements, roles and RLS safely for"
+  default_prompt: "Use $postgres-observability-security to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Memory and Connections"
+  short_description: "Reason about shared_buffers, work_mem, maintenance memory, sessi"
+  default_prompt: "Use $postgres-memory-connections to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
