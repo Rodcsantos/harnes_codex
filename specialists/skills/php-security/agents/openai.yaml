@@ -1,0 +1,6 @@
+interface:
+  display_name: "PHP Security"
+  short_description: "Review PHP apps for injection, auth/authz, sessions, uploads, SS"
+  default_prompt: "Use $php-security to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

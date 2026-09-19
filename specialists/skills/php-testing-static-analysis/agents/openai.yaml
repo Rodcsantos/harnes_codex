@@ -1,0 +1,6 @@
+interface:
+  display_name: "PHP Testing and Analysis"
+  short_description: "Use PHPUnit/Pest plus PHPStan/Psalm to improve correctness witho"
+  default_prompt: "Use $php-testing-static-analysis to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

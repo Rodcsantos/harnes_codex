@@ -1,0 +1,6 @@
+interface:
+  display_name: "PHP REST APIs"
+  short_description: "Implement version-compatible REST endpoints, validation, auth bo"
+  default_prompt: "Use $php-rest-api to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

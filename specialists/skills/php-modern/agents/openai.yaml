@@ -1,0 +1,6 @@
+interface:
+  display_name: "Modern PHP"
+  short_description: "Use project-compatible PHP 8.x features with strict and maintain"
+  default_prompt: "Use $php-modern to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

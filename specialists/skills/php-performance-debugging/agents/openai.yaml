@@ -1,0 +1,6 @@
+interface:
+  display_name: "PHP Performance Debugging"
+  short_description: "Diagnose PHP latency and memory using profiling, Xdebug, DB evid"
+  default_prompt: "Use $php-performance-debugging to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
