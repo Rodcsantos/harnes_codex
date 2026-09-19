@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Memory and Eviction"
+  short_description: "Diagnose maxmemory, fragmentation, expiration, eviction policy,"
+  default_prompt: "Use $redis-memory-eviction to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

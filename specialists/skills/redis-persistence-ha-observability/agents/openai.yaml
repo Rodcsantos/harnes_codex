@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Persistence HA Observability"
+  short_description: "Manage RDB/AOF, replication/Sentinel/Cluster, latency, slowlog,"
+  default_prompt: "Use $redis-persistence-ha-observability to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

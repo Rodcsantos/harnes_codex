@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Streams and Queues"
+  short_description: "Design Streams/consumer groups, retries, pending entries, idempo"
+  default_prompt: "Use $redis-streams-queues to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

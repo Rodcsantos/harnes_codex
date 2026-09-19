@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Cache Invalidation"
+  short_description: "Implement deterministic cache invalidation without stale-key exp"
+  default_prompt: "Use $redis-invalidation to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

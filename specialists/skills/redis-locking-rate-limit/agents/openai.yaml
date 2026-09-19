@@ -1,0 +1,6 @@
+interface:
+  display_name: "Redis Locks and Rate Limits"
+  short_description: "Implement bounded distributed locks and rate limits with explici"
+  default_prompt: "Use $redis-locking-rate-limit to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
