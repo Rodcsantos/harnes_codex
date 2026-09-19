@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django Production"
+  short_description: "Review Django deployment, caching, static/media, workers, health"
+  default_prompt: "Use $django-production to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

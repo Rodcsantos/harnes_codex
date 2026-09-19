@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL Backup and Replication"
+  short_description: "Design backups, tested recovery, replication monitoring, and saf"
+  default_prompt: "Use $mysql-backup-replication to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

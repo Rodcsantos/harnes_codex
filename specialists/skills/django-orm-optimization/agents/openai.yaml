@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django ORM Optimization"
+  short_description: "Diagnose N+1, queryset evaluation, joins, prefetching, annotatio"
+  default_prompt: "Use $django-orm-optimization to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

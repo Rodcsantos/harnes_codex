@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django Transactions"
+  short_description: "Design atomic boundaries, locking, idempotency, and on_commit be"
+  default_prompt: "Use $django-transactions to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
