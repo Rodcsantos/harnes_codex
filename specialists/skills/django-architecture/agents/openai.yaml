@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django Architecture"
+  short_description: "Organize Django apps, services, boundaries, and side effects for"
+  default_prompt: "Use $django-architecture to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
