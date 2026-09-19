@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL Indexing"
+  short_description: "Design composite/covering indexes from predicates, joins, orderi"
+  default_prompt: "Use $mysql-indexing to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

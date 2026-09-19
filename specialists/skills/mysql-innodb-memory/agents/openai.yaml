@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL InnoDB Memory"
+  short_description: "Tune buffer pool and connection-related memory within real host/"
+  default_prompt: "Use $mysql-innodb-memory to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

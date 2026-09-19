@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL Query Optimization"
+  short_description: "Analyze query shape and execution plans to reduce scanned rows,"
+  default_prompt: "Use $mysql-query-optimization to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

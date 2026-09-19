@@ -1,0 +1,6 @@
+interface:
+  display_name: "MySQL Observability Safety"
+  short_description: "Inspect connections, waits, resource usage, security, and mainte"
+  default_prompt: "Use $mysql-observability-safety to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
