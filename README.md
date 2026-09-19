@@ -1,14 +1,16 @@
 # harnes_codex
 
-Ambiente centralizado para **WSL + Codex CLI** com foco em desenvolvimento profissional, baixo consumo de tokens, especialistas por stack e operação de infraestrutura.
+Repositório canônico do ambiente **WSL + Codex CLI**: setup, economia de tokens, especialistas por stack, skills progressivas e operação de infraestrutura.
 
-## Objetivos
+## Estado atual
 
-- Reproduzir o ambiente de desenvolvimento WSL/Codex.
-- Centralizar scripts, configurações, instruções, agentes e skills.
-- Manter histórico técnico e artefatos anteriores em `archive/`.
-- Separar regras globais, especialistas de desenvolvimento e operação de infraestrutura.
-- Facilitar instalação, diagnóstico, atualização e rollback.
+- **9 agentes especializados**: Python, Django, PHP, React, MySQL, PostgreSQL, Redis, infraestrutura e orquestração full-stack.
+- **65 skills** especializadas, cada uma com `SKILL.md` e `agents/openai.yaml`.
+- **144/144 arquivos** do pacote original `codex-dev-specialists` recuperados e versionados em `specialists/`.
+- Stack de eficiência: **RTK, Atlas, SigMap, Serena, mcp2cli/mcpq, Headroom e Tokview**.
+- Documentação histórica preservada em `archive/`.
+- Regras globais do harness em `AGENTS.md`.
+- CI de integridade em `.github/workflows/verify-harness.yml`.
 
 ## Estrutura
 
@@ -17,29 +19,91 @@ Ambiente centralizado para **WSL + Codex CLI** com foco em desenvolvimento profi
 ├── AGENTS.md
 ├── INSTALL.md
 ├── README.md
-├── agents/
 ├── archive/
+│   ├── codex-cli-profissional-python-django-etl.md
+│   └── harness-desenvolvimento-maximo-codex-wsl.md
 ├── config/
+│   └── codex-config.example.toml
 ├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── INFRASTRUCTURE.md
+│   ├── PROJECT-CENTRAL.md
+│   ├── SOURCE-MANIFEST.md
+│   ├── SPECIALISTS.md
+│   ├── TOKEN-EFFICIENCY.md
+│   └── WSL-SETUP.md
 ├── scripts/
-└── skills/
+│   ├── install-codex-efficient-stack.sh
+│   ├── install-specialists.sh
+│   └── verify.sh
+└── specialists/
+    ├── agents/
+    │   ├── django-expert.toml
+    │   ├── fullstack-orchestrator.toml
+    │   ├── infra-expert.toml
+    │   ├── mysql-dba.toml
+    │   ├── php-expert.toml
+    │   ├── postgresql-dba.toml
+    │   ├── python-expert.toml
+    │   ├── react-expert.toml
+    │   └── redis-expert.toml
+    ├── skills/                 # 65 skills
+    ├── config-snippet.toml
+    ├── install.sh
+    ├── manifest.json
+    ├── uninstall.sh
+    └── verify.py
 ```
 
-## Instalação rápida
+## Instalação no WSL
 
 ```bash
 git clone https://github.com/Rodcsantos/harnes_codex.git
 cd harnes_codex
+
 chmod +x scripts/*.sh
+
+# Ferramentas de eficiência/contexto para Codex
 ./scripts/install-codex-efficient-stack.sh
+
+# 9 agentes + 65 skills
 ./scripts/install-specialists.sh
+
+# Diagnóstico final
 ./scripts/verify.sh
 ```
 
-O stack eficiente inclui Codex CLI, RTK, Atlas, SigMap, Serena, mcp2cli, Headroom, Tokview e política de MCP lazy/on-demand.
+O instalador de especialistas faz backup dos agentes/skills que substituir em `$CODEX_HOME/backups/` antes de copiar o pacote.
 
-Os especialistas cobrem Python, Django, PHP, React, MySQL, PostgreSQL, Redis, infraestrutura e orquestração full-stack.
+## Verificação do pacote
 
-> Revise scripts e configurações antes de executar em ambientes corporativos ou produtivos. Credenciais, tokens e segredos nunca devem ser commitados.
+Sem instalar nada na home:
 
-Veja `docs/PROJECT-CENTRAL.md` e `docs/SOURCE-MANIFEST.md` para contexto, decisões e origem dos artefatos.
+```bash
+python3 specialists/verify.py specialists
+```
+
+Validação de shell:
+
+```bash
+bash -n scripts/install-codex-efficient-stack.sh
+bash -n scripts/install-specialists.sh
+bash -n scripts/verify.sh
+bash -n specialists/install.sh
+bash -n specialists/uninstall.sh
+```
+
+## Segurança
+
+Não versionar tokens, PATs, chaves privadas, `.env`, dumps reais, credenciais MCP ou certificados privados. Produção deve ser **read-only por padrão** para diagnóstico de banco/infra; operações destrutivas exigem aprovação explícita e rollback.
+
+## Documentação
+
+Comece por:
+
+- `docs/PROJECT-CENTRAL.md` — visão consolidada.
+- `docs/ARCHITECTURE.md` — arquitetura do harness.
+- `docs/SPECIALISTS.md` — catálogo de agentes/skills.
+- `docs/INFRASTRUCTURE.md` — escopo operacional de infraestrutura.
+- `docs/TOKEN-EFFICIENCY.md` — política de economia de tokens.
+- `docs/SOURCE-MANIFEST.md` — origem e fidelidade dos artefatos.
