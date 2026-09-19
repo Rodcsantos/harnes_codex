@@ -1,0 +1,6 @@
+interface:
+  display_name: "Django Migrations"
+  short_description: "Create safe schema and data migrations suitable for production r"
+  default_prompt: "Use $django-migrations to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
