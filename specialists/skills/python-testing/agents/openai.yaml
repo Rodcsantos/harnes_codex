@@ -1,0 +1,6 @@
+interface:
+  display_name: "Python Testing"
+  short_description: "Build focused pytest suites with fixtures, parametrization, mock"
+  default_prompt: "Use $python-testing to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

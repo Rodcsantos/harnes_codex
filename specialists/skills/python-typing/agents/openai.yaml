@@ -1,0 +1,6 @@
+interface:
+  display_name: "Python Typing"
+  short_description: "Apply precise Python typing and static-analysis-friendly interfa"
+  default_prompt: "Use $python-typing to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

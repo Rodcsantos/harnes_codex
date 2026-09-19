@@ -1,0 +1,6 @@
+interface:
+  display_name: "React Architecture"
+  short_description: "Structure React features, components, state ownership, and bound"
+  default_prompt: "Use $react-architecture to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
