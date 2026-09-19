@@ -1,0 +1,6 @@
+interface:
+  display_name: "Python Performance"
+  short_description: "Profile CPU, memory, allocations, I/O, and algorithmic hotspots"
+  default_prompt: "Use $python-performance to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

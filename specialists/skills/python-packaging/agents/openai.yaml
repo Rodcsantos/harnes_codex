@@ -1,0 +1,6 @@
+interface:
+  display_name: "Python Packaging"
+  short_description: "Manage pyproject, uv/pip, dependency groups, builds, and reprodu"
+  default_prompt: "Use $python-packaging to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
