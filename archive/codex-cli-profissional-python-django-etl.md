@@ -998,3 +998,54 @@ Codex CLI
 │
 ├── MCP
 │   ├── Context7                    ★★★★★
+│   ├── observabilidade             ★★★★☆
+│   └── DB read-only                ★★★☆☆ conforme ambiente
+│
+├── SUBAGENTS
+│   ├── explorer
+│   ├── python-reviewer
+│   ├── django-reviewer
+│   ├── test-reviewer
+│   ├── security-reviewer
+│   └── performance-reviewer
+│
+├── HOOKS
+│   ├── PreToolUse → safety
+│   ├── PostToolUse → inspection
+│   ├── Pre/PostCompact → continuity
+│   └── Stop → verification
+│
+├── MEMORY
+│   ├── AGENTS.md → regras determinísticas
+│   └── ~/.codex/memories → aprendizado adaptativo
+│
+└── STATIC / TEST HARNESS
+    ├── Ruff
+    ├── BasedPyright/Pyright
+    ├── pytest
+    ├── pytest-django
+    ├── coverage
+    ├── Bandit
+    └── pip-audit
+```
+
+O ponto principal é que **Superpowers oficial altera bastante a conclusão inicial sobre a distância Hermes × Codex**. Em agosto/setembro de 2026, o Codex já tem um pacote oficial de marketplace que entrega precisamente várias das práticas que tornavam Hermes atraente: debugging sistemático, TDD, planejamento, verificação, revisão, worktrees e desenvolvimento com subagentes. fileciteturn9file0L2-L10
+
+Ainda restam duas lacunas que eu preencheria manualmente no seu caso: **Skills profundamente específicas de Django/ETL** e **semântica de código via LSP first-class**. Para a primeira, Skills próprias são a solução correta. Para a segunda, hoje eu continuaria usando BasedPyright/Pyright/Ruff/pytest como gates determinísticos e o LSP do IDE, deixando LSP→MCP como componente experimental; issues do projeto Codex ainda registram essa lacuna. ### Fontes primárias prioritárias
+
+| Fonte | Uso |
+|---|---|
+| [OpenAI — Codex Skills](https://developers.openai.com/codex/skills) | modelo e descoberta de Skills |
+| [OpenAI — Plugins](https://developers.openai.com/codex/plugins) | distribuição moderna |
+| [OpenAI — Hooks](https://developers.openai.com/codex/hooks) | lifecycle/tool hooks |
+| [OpenAI — MCP](https://developers.openai.com/codex/mcp) | configuração de servidores |
+| [OpenAI Plugins GitHub](https://github.com/openai/plugins) | catálogo oficial atual |
+| [OpenAI Skills GitHub](https://github.com/openai/skills) | legado; atualmente deprecated |
+| [Superpowers](https://github.com/obra/superpowers) | metodologia/Skills |
+| [Skills CLI](https://github.com/vercel-labs/skills) | instalação multi-harness |
+| [Skills.sh](https://skills.sh/) | discovery/registry |
+| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | fonte das Skills Hermes |
+| [Hermes Skills Catalog](https://hermes-agent.nousresearch.com/docs/reference/skills-catalog/) | catálogo bundled |
+| [Codex GitHub](https://github.com/openai/codex) | issues/estado de LSP |
+
+A hierarquia que eu adotaria para confiar em código/configuração é **docs OpenAI → `openai/plugins` → upstream GitHub da Skill/plugin → issues upstream → skills.sh como discovery**. O `openai/skills` antigo e cópias agregadas de terceiros ficam abaixo disso porque o próprio repositório oficial antigo informa que foi substituído pelo modelo de Plugins. fileciteturn3file0L2-L2
