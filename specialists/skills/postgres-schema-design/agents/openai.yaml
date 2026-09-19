@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Schema Design"
+  short_description: "Design PostgreSQL constraints, types, keys, indexes, and data mo"
+  default_prompt: "Use $postgres-schema-design to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

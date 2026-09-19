@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Vacuum and Statistics"
+  short_description: "Manage autovacuum, analyze, bloat signals, freeze risk, and plan"
+  default_prompt: "Use $postgres-vacuum-statistics to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

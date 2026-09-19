@@ -1,0 +1,6 @@
+interface:
+  display_name: "PostgreSQL Query Optimization"
+  short_description: "Improve SQL using planner statistics, query shape, joins, predic"
+  default_prompt: "Use $postgres-query-optimization to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Python Architecture"
+  short_description: "Design or refactor Python module boundaries without unnecessary"
+  default_prompt: "Use $python-architecture to handle this task with evidence, safe changes, and validation."
+policy:
+  allow_implicit_invocation: true
