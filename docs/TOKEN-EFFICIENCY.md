@@ -7,16 +7,16 @@ A ordem padrão é **evidência mínima suficiente**. Não existe uma escada obr
 
 1. `rg` / faixa de linhas / `git diff` / símbolo exato.
 2. **Atlas OU SigMap** para orientar um repositório grande/desconhecido.
-3. LSP/code intelligence/Serena quando navegação por símbolos ou referências evita leituras.
-4. CLI direta ou ferramenta externa específica.
-5. Leitura ampla somente quando a evidência estreita não basta.
+4. LSP/code intelligence/Serena quando navegação por símbolos ou referências evita leituras.
+5. CLI direta ou ferramenta externa específica.
+6. Leitura ampla somente quando a evidência estreita não basta.
 
 ## Ferramentas
 
 | Ferramenta | Política | Melhor uso | Observação |
 |---|---|---|---|
 | RTK | manter | comprimir stdout ruidoso de testes, git, Docker, linters | use somente quando a saída compactada preserva a evidência necessária |
-| Atlas | sob demanda | mapa estrutural inicial de repo desconhecido, com budget pequeno | ainda é alpha; não injete mapa em toda tarefa |
+| ast-grep | manter | busca/reescrita estrutural local, rápida e determinística | zero schema/prompt permanente; use quando `rg` produzir ruído |\n| Atlas | sob demanda | mapa estrutural inicial de repo desconhecido, com budget pequeno | ainda é alpha; não injete mapa em toda tarefa |
 | SigMap | sob demanda | busca estrutural/evidence pack determinístico e auditável | escolha em vez de Atlas quando a pergunta é por símbolos/evidência; não rode ambos por rotina |
 | Serena | sob demanda | definição/referências/refactor semântico | maior custo operacional; vale quando grep/mapa não resolve |
 | mcp2cli/mcpq | compatibilidade | clientes/servidores em que schemas MCP realmente ficam residentes | Claude Code já difere ferramentas MCP por padrão; não migrar MCPs do Claude automaticamente |
