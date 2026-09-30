@@ -5,11 +5,11 @@ Repositório canônico do ambiente **WSL + Codex CLI**: setup, economia de token
 ## Estado atual
 
 - **16 agentes**: 9 especialistas de stack (Python, Django, PHP, React, MySQL, PostgreSQL, Redis, infraestrutura, orquestração full-stack) + 7 de processo (tech lead, explorer, architect, test engineer, verifier, reviewer, security reviewer).
-- **70 skills**: 65 de domínio + 5 de fluxo (`flow-plan`, `flow-implement`, `flow-verify`, `flow-review`, `flow-ship`), cada uma com `SKILL.md` e `agents/openai.yaml`.
+- **70 skills no catálogo fonte**: 65 de domínio + 5 de fluxo. A instalação global é seletiva por stack para não carregar descrições irrelevantes em toda sessão.
 - **Codex CLI e Claude Code** com a mesma fonte: agentes Claude gerados dos TOML (`claude/agents/`), `CLAUDE.md` importa o `AGENTS.md`.
 - **Hooks** (`hooks/`): guard, post-edit, stop-gate e session-start. Veja `docs/HOOKS-LSP-MCP.md`.
 - **144/144 arquivos** do pacote original `codex-dev-specialists` recuperados e versionados em `specialists/`.
-- Stack de eficiência: **RTK, Atlas, SigMap, Serena, mcp2cli/mcpq, Headroom e Tokview**.
+- Stack de eficiência: **RTK** como compactador de stdout; **Atlas ou SigMap** para orientação sob demanda; **Serena/LSP** para símbolos; **mcp2cli/mcpq** e **Headroom** apenas quando medidos como úteis; **Tokview** para observabilidade.
 - Documentação histórica preservada em `archive/`.
 - Regras globais do harness em `AGENTS.md`.
 - CI de integridade em `.github/workflows/verify-harness.yml`.
@@ -68,8 +68,15 @@ chmod +x scripts/*.sh
 # Ferramentas de eficiência/contexto para Codex
 ./scripts/install-codex-efficient-stack.sh
 
-# Time completo + skills + hooks nos dois CLIs (ou --engine codex|claude)
+# Base enxuta: flow-* + shared-* nos dois CLIs
 ./scripts/install-harness.sh --engine both
+
+# Adicione somente as stacks deste projeto, por exemplo:
+./scripts/install-harness.sh --engine both --skills react,php
+./scripts/install-harness.sh --engine both --skills django,postgres,redis
+
+# Catálogo completo somente para laboratório/projeto realmente multi-stack:
+# ./scripts/install-harness.sh --engine both --skills all
 
 # Opcional: language servers (LSP)
 ./scripts/install-lsp.sh python ts
@@ -78,7 +85,7 @@ chmod +x scripts/*.sh
 ./scripts/verify.sh
 ```
 
-O instalador de especialistas faz backup dos agentes/skills que substituir em `$CODEX_HOME/backups/` antes de copiar o pacote.
+O instalador mantém todos os agentes, mas instala por padrão apenas as skills `flow-*` e `shared-*`. Packs de domínio são adicionados com `--skills`. No Codex, entradas substituídas/removidas são preservadas em `$CODEX_HOME/backups/`.
 
 ## Verificação do pacote
 
