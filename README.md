@@ -126,5 +126,5 @@ Comece por:
 - `docs/HOOKS-LSP-MCP.md` — hooks, LSP e MCP.
 - `docs/SPECIALISTS.md` — catálogo de agentes/skills.
 - `docs/INFRASTRUCTURE.md` — escopo operacional de infraestrutura.
-- `docs/TOKEN-EFFICIENCY.md` — política de economia de tokens.
+- `docs/TOKEN-EFFICIENCY.md` — política de economia de tokens.\n- `docs/UPSTREAM-GUIDANCE.md` — fontes oficiais e decisões da auditoria OpenAI/Claude.
 - `docs/SOURCE-MANIFEST.md` — origem e fidelidade dos artefatos.
