@@ -49,5 +49,8 @@ jobs:
           print(f"OK: {len(agents)} agents, {len(skills)} skills, manifest in sync")
           PY
 
+      - name: Domain skills quality gate
+        run: python3 -m unittest tests.test_skills -v
+
       - name: Hook tests
         run: python3 -m unittest discover -s tests -v
