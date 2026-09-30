@@ -53,4 +53,4 @@ jobs:
         run: python3 -m unittest tests.test_skills -v
 
       - name: Harness policy and hook tests
-        run: python3 -m unittest tests.test_agent_efficiency tests.test_hooks -v
+        run: python3 -m unittest tests.test_agent_efficiency tests.test_agent_profiles tests.test_hooks -v

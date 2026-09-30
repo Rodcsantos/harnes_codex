@@ -21,6 +21,7 @@ This repository is the canonical source for the WSL + Codex/Claude development h
 - Redis: redis_expert
 - Infrastructure/containers/proxy/Linux/observability: infra_expert
 - Cross-stack work: fullstack_orchestrator
+- Product/UX/QA/Security/DevOps/SRE/Delivery: use only the installed lifecycle profile specialist when the task materially needs that domain; full catalog is in `docs/LIFECYCLE-AGENTS.md`.
 
 ## Execution by risk
 - **Routine/default:** keep the task in the main agent. Use one targeted domain skill or specialist only when it adds material value. Edit -> targeted verify -> done.

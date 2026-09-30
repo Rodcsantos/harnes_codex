@@ -31,11 +31,13 @@ class AgentEfficiencyTests(unittest.TestCase):
         self.assertEqual(agents["default_subagent_model"], "gpt-6-luna")
         self.assertEqual(agents["default_subagent_reasoning_effort"], "low")
 
-    def test_selective_skill_install_is_default(self):
+    def test_selective_agent_and_skill_install_is_default(self):
         for rel in ("specialists/install.sh", "scripts/install-harness.sh"):
             text = (ROOT / rel).read_text()
             self.assertIn("HARNESS_SKILL_PROFILES:-base", text, rel)
+            self.assertIn("HARNESS_AGENT_PROFILES:-auto", text, rel)
             self.assertIn("--skills", text, rel)
+            self.assertIn("--agents", text, rel)
 
     def test_mcp_migration_is_opt_in(self):
         text = (ROOT / "scripts" / "install-codex-efficient-stack.sh").read_text()
