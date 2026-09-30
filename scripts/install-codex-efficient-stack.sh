@@ -7,6 +7,7 @@ set -Eeuo pipefail
 # Installs/configures:
 #   - OpenAI Codex CLI
 #   - RTK (transparent Bash output compression via Codex PreToolUse hook)
+#   - ast-grep (fast syntax-aware structural search/rewrite, no prompt overhead)
 #   - Atlas (token-budgeted repository maps)
 #   - SigMap (signature/evidence based code retrieval)
 #   - Serena (semantic/LSP navigation and refactoring)
@@ -14,11 +15,12 @@ set -Eeuo pipefail
 #   - Headroom (optional context compression wrapper)
 #   - Tokview (token observability)
 #   - A progressive Codex skill + tiny global AGENTS.md policy
-#   - Safe migration of compatible native Codex stdio MCPs to mcp2cli
+#   - Optional migration of compatible native Codex stdio MCPs to mcp2cli
 #   - Rollback/report/doctor/update helper commands
 #
 # Safety policy for MCP migration:
-#   * Only local stdio MCPs are auto-migrated.
+#   * Migration is opt-in (HARNESS_MIGRATE_MCP=1 / codex-mcp-migrate).
+#   * Only local stdio MCPs are eligible.
 #   * HTTP/OAuth MCPs stay native in Codex.
 #   * Required/remote-environment MCPs stay native.
 #   * MCPs with explicit Codex approval policies stay native.
@@ -97,6 +99,15 @@ fi
 command -v uv >/dev/null 2>&1 || die "uv não encontrado após instalação."
 uv python install 3.13 >/dev/null 2>&1 || true
 uv --version
+
+log "ast-grep - busca estrutural rápida sem carregar MCP/LSP"
+if command -v ast-grep >/dev/null 2>&1; then
+  uv tool upgrade ast-grep-cli >/dev/null 2>&1 || true
+else
+  uv tool install --python 3.13 ast-grep-cli
+fi
+command -v ast-grep >/dev/null 2>&1 || die "ast-grep não encontrado."
+ast-grep --version 2>/dev/null || true
 
 log "Runtime auxiliar do stack (tomlkit para migração reversível do config.toml)"
 if [[ ! -x "$STACK_VENV/bin/python" ]]; then
@@ -762,7 +773,7 @@ check() {
     fail=1
   fi
 }
-for c in codex rtk atlas sigmap serena mcp2cli mcpq headroom tokview rg fd; do check "\$c"; done
+for c in codex rtk ast-grep atlas sigmap serena mcp2cli mcpq headroom tokview rg fd; do check "\$c"; done
 printf '\n-- RTK/Codex hook --\n'
 rtk init --show --codex 2>/dev/null || true
 printf '\n-- MCP lazy services --\n'
