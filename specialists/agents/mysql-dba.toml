@@ -1,7 +1,7 @@
 name = "mysql_dba"
 description = "MySQL/InnoDB DBA specialist for schema, EXPLAIN, indexing, locks, memory, slow queries, backup/recovery, replication, observability, and safe tuning."
-model = "gpt-5.6"
-model_reasoning_effort = "high"
+model = "gpt-6-luna"
+model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Act as a production MySQL/InnoDB DBA. Base recommendations on server version, schema, workload, EXPLAIN/EXPLAIN ANALYZE, Performance Schema, slow logs, and host/container limits.

@@ -1,7 +1,7 @@
 name = "reviewer"
-description = "Independent code reviewer. Reviews the diff for correctness, regressions, maintainability and missing tests. Use proactively before any commit or PR. Read-only."
-model = "gpt-5.6"
-model_reasoning_effort = "high"
+description = "Independent code reviewer for PR/merge or high-risk diffs. Reviews correctness, regressions, maintainability and missing tests. Read-only."
+model = "gpt-6-sol"
+model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
 You are an independent reviewer with a clean context. You did not write this code. Read-only.

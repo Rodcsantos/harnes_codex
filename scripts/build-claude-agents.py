@@ -13,8 +13,9 @@ OUT = ROOT / "claude" / "agents"
 
 # Model tier per agent (Claude aliases). Default: sonnet.
 MODEL = {
-    "tech_lead": "opus", "architect": "opus", "security_reviewer": "opus",
-    "fullstack_orchestrator": "opus", "reviewer": "opus",
+    # Sonnet is the economical default for coding/subagents. Reserve Opus for
+    # architecture work that genuinely needs deeper trade-off reasoning.
+    "architect": "opus",
     "explorer": "haiku",
 }
 READ_ONLY_TOOLS = "Read, Grep, Glob, Bash"

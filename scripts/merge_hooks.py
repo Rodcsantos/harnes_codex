@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotently merge harness hooks into a Claude Code settings.json or Codex hooks.json.
+"""Idempotently merge harness hooks into Claude Code settings.json or Codex hooks.json.
 
 Usage: merge_hooks.py <file> <claude|codex> <hooks_dir> [--remove]
 A timestamped .bak is written before any change. Entries are identified by the
@@ -18,17 +18,19 @@ def cmd(script, *extra):
 
 if engine == "claude":
     spec = {
-        "SessionStart": [("startup|resume|clear", cmd("session_start.py"), 10)],
-        "PreToolUse": [("Bash|Read|Edit|Write|MultiEdit", cmd("guard.py", "--engine", "claude"), 10)],
-        "PostToolUse": [("Edit|Write|MultiEdit", cmd("post_edit.py"), 60)],
-        "Stop": [(None, cmd("stop_gate.py"), 330)],
+        "SessionStart": [("startup|resume|clear", cmd("session_start.py"), 10, None)],
+        "PreToolUse": [("Bash|Read|Edit|Write|MultiEdit", cmd("guard.py", "--engine", "claude"), 10, None)],
+        "PostToolUse": [("Edit|Write|MultiEdit", cmd("post_edit.py"), 60, None)],
+        "Stop": [(None, cmd("stop_gate.py"), 330, None)],
     }
 else:  # codex
     spec = {
-        "SessionStart": [(None, cmd("session_start.py"), 10)],
-        "PreToolUse": [("Bash|apply_patch", cmd("guard.py", "--engine", "codex"), 10)],
-        "PostToolUse": [("apply_patch", cmd("post_edit.py"), 60)],
-        "Stop": [(None, cmd("stop_gate.py"), 330)],
+        # Codex supports a per-handler context limit. Keep volatile startup
+        # orientation bounded even if a dirty tree or plan grows unexpectedly.
+        "SessionStart": [(None, cmd("session_start.py"), 10, 700)],
+        "PreToolUse": [("Bash|apply_patch", cmd("guard.py", "--engine", "codex"), 10, None)],
+        "PostToolUse": [("apply_patch", cmd("post_edit.py"), 60, None)],
+        "Stop": [(None, cmd("stop_gate.py"), 330, None)],
     }
 
 data = json.loads(path.read_text()) if path.exists() and path.read_text().strip() else {}
@@ -37,7 +39,6 @@ if path.exists():
 hooks = data.setdefault("hooks", {})
 for event, entries in spec.items():
     groups = hooks.setdefault(event, [])
-    # drop previous harness entries (idempotent), keep everything else
     for g in groups:
         g["hooks"] = [h for h in g.get("hooks", []) if hooks_dir not in h.get("command", "")]
     groups[:] = [g for g in groups if g.get("hooks")]
@@ -45,8 +46,11 @@ for event, entries in spec.items():
         if not groups:
             del hooks[event]
         continue
-    for matcher, command, timeout in entries:
-        g = {"hooks": [{"type": "command", "command": command, "timeout": timeout}]}
+    for matcher, command, timeout, context_limit in entries:
+        hook = {"type": "command", "command": command, "timeout": timeout}
+        if context_limit is not None:
+            hook["additionalContextLimit"] = context_limit
+        g = {"hooks": [hook]}
         if matcher:
             g["matcher"] = matcher
         groups.append(g)

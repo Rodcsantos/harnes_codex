@@ -1,6 +1,6 @@
 name = "test_engineer"
 description = "Test engineer. Writes the failing test first, then minimal deterministic tests for new behavior and regressions. Edits test files only unless told otherwise."
-model = "gpt-5.6"
+model = "gpt-6-luna"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """

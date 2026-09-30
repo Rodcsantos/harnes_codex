@@ -1,32 +1,32 @@
 # Codex Development Specialists
 
-Ready-to-install Codex custom agents and progressive-disclosure skills for Python, Django, PHP, React, MySQL, PostgreSQL and Redis.
+Pacote de agentes e skills progressivas para Python, Django, PHP, React, MySQL, PostgreSQL e Redis.
 
-## Included
-- `django-expert.toml`
-- `fullstack-orchestrator.toml`
-- `mysql-dba.toml`
-- `php-expert.toml`
-- `postgresql-dba.toml`
-- `python-expert.toml`
-- `react-expert.toml`
-- `redis-expert.toml`
+## Política de contexto
+O repositório mantém todo o catálogo como fonte. A instalação padrão é **base**: somente `flow-*` e `shared-*`. Isso reduz o catálogo de descrições carregado em cada sessão. Adicione apenas as stacks usadas pelo projeto.
 
-Skills: **65** task-focused skills, each with `SKILL.md` and `agents/openai.yaml`.
-
-## Install in WSL
+## Instalar
 ```bash
-unzip codex-dev-specialists.zip
-cd codex-dev-specialists
+# base: flow-* + shared-*
 ./install.sh
+
+# stacks específicas
+./install.sh --skills react,php
+./install.sh --skills django,postgres,redis
+
+# Django inclui também as skills Python.
+# Catálogo inteiro apenas quando necessário:
+./install.sh --skills all
 ```
 
-The installer backs up only entries it replaces under `$CODEX_HOME/backups/`, validates installed files, and does not rewrite your existing `config.toml`. Optionally merge `config-snippet.toml` into your Codex configuration.
+Também é possível definir `HARNESS_SKILL_PROFILES=react,php`.
 
-## Verify
+O instalador mantém os agentes disponíveis, faz backup de entradas Codex substituídas/removidas em `$CODEX_HOME/backups/`, valida os arquivos instalados e não reescreve `config.toml`.
+
+## Verificar
 ```bash
 python3 verify.py "${CODEX_HOME:-$HOME/.codex}"
 ```
 
-## Example usage
-Ask Codex explicitly to use `django_expert`, `mysql_dba`, `react_expert`, etc., or ask `fullstack_orchestrator` to delegate a cross-stack investigation.
+## Uso
+Prefira o agente principal para tarefas rotineiras. Acione um especialista quando o domínio realmente trouxer ganho e use `fullstack_orchestrator` somente para trabalho cross-stack acoplado.

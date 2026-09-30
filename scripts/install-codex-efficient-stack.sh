@@ -7,6 +7,7 @@ set -Eeuo pipefail
 # Installs/configures:
 #   - OpenAI Codex CLI
 #   - RTK (transparent Bash output compression via Codex PreToolUse hook)
+#   - ast-grep (fast syntax-aware structural search/rewrite, no prompt overhead)
 #   - Atlas (token-budgeted repository maps)
 #   - SigMap (signature/evidence based code retrieval)
 #   - Serena (semantic/LSP navigation and refactoring)
@@ -14,11 +15,12 @@ set -Eeuo pipefail
 #   - Headroom (optional context compression wrapper)
 #   - Tokview (token observability)
 #   - A progressive Codex skill + tiny global AGENTS.md policy
-#   - Safe migration of compatible native Codex stdio MCPs to mcp2cli
+#   - Optional migration of compatible native Codex stdio MCPs to mcp2cli
 #   - Rollback/report/doctor/update helper commands
 #
 # Safety policy for MCP migration:
-#   * Only local stdio MCPs are auto-migrated.
+#   * Migration is opt-in (HARNESS_MIGRATE_MCP=1 / codex-mcp-migrate).
+#   * Only local stdio MCPs are eligible.
 #   * HTTP/OAuth MCPs stay native in Codex.
 #   * Required/remote-environment MCPs stay native.
 #   * MCPs with explicit Codex approval policies stay native.
@@ -97,6 +99,15 @@ fi
 command -v uv >/dev/null 2>&1 || die "uv não encontrado após instalação."
 uv python install 3.13 >/dev/null 2>&1 || true
 uv --version
+
+log "ast-grep - busca estrutural rápida sem carregar MCP/LSP"
+if command -v ast-grep >/dev/null 2>&1; then
+  uv tool upgrade ast-grep-cli >/dev/null 2>&1 || true
+else
+  uv tool install --python 3.13 ast-grep-cli
+fi
+command -v ast-grep >/dev/null 2>&1 || die "ast-grep não encontrado."
+ast-grep --version 2>/dev/null || true
 
 log "Runtime auxiliar do stack (tomlkit para migração reversível do config.toml)"
 if [[ ! -x "$STACK_VENV/bin/python" ]]; then
@@ -607,14 +618,18 @@ esac
 EOF2
 chmod +x "$HOME_BIN/mcpq"
 
-log "Migrando automaticamente MCPs stdio compatíveis já existentes no Codex"
-"$HOME_BIN/codex-mcp-migrate" || warn "Migração automática encontrou um problema; configuração original foi preservada/backupeada. Veja codex-mcp-report."
+log "Migração MCP lazy (opt-in)"
+if [[ "${HARNESS_MIGRATE_MCP:-0}" == "1" ]]; then
+  "$HOME_BIN/codex-mcp-migrate" || warn "Migração encontrou um problema; configuração original foi preservada/backupeada. Veja codex-mcp-report."
+else
+  ok "MCPs nativos preservados. Para migrar stdio compatível após medir necessidade: HARNESS_MIGRATE_MCP=1 codex-mcp-migrate"
+fi
 
 log "Skill progressiva: token-efficient-coding"
 cat > "$SKILL_DIR/SKILL.md" <<'SKILL'
 ---
 name: token-efficient-coding
-description: Use for coding, debugging, repository exploration, testing, refactoring, or developer-tool tasks where minimizing context/token use matters. Prefer compact shell output, token-budgeted repo maps, targeted symbols, lazy MCP discovery, diffs, and concise responses. Do not use for non-development tasks.
+description: Use only when explicitly optimizing or diagnosing Codex context/token usage, repository-read overhead, or MCP/tool-schema overhead. Do not invoke for ordinary coding tasks.
 ---
 
 Minimize context without sacrificing correctness.
@@ -625,17 +640,16 @@ Minimize context without sacrificing correctness.
 - Never use broad `cat`, recursive log dumps, or huge `find` output when a narrower query answers the task.
 
 2. Repository orientation
-- In an unfamiliar/large repo, prefer `atlas . --budget 1024` before opening many files.
-- Raise the budget only when the task requires it; use `--focus <path>` for the relevant area.
-- Treat Atlas output as an index, not source-of-truth code.
+- In an unfamiliar/large repo, choose **Atlas or SigMap**, not both by default.
+- Use Atlas for a small token-budgeted structural map; use SigMap when signatures/evidence answer the question more directly.
+- Raise budgets only when the task requires it; treat generated maps as indexes, not source-of-truth code.
 
 3. Code retrieval
-- Prefer SigMap when signatures/evidence can replace whole-file reads.
-- Prefer Serena only when semantic symbol/reference/LSP operations materially help.
+- Prefer Serena only when semantic symbol/reference/LSP operations materially help beyond grep/Atlas/SigMap.
 - Both are available lazily through `mcpq`/`mcp2cli`; do not register or dump their schemas into context preemptively.
 
 4. External MCPs
-- Native stdio MCPs may have been moved to lazy loading. Use `mcpq list` only when an external service is actually needed.
+- Native stdio MCPs are preserved by default. Use `mcpq` only for services you explicitly migrated because native discovery was measured to cost more context.
 - Then use `mcpq search <term>` or `mcpq tools <service>`.
 - Inspect only the chosen tool with `mcpq schema <service> <tool>`.
 - Call it with `mcpq call <service> <tool> '<json>'` and use `--fields` when only a few output fields matter.
@@ -675,7 +689,7 @@ codex-mcp-report    # show exactly what was migrated/skipped and the backup path
 codex-mcp-restore   # re-enable migrated native MCPs and remove migration copies
 ```
 
-Auto-migration intentionally leaves these native:
+Migration intentionally leaves these native:
 - Streamable HTTP/HTTP MCPs, to preserve Codex OAuth/bearer/header-helper behavior.
 - `required=true` servers.
 - stdio servers using a remote execution environment.
@@ -696,8 +710,8 @@ s = p.read_text(encoding='utf-8') if p.exists() else ''
 s = re.sub(r'\n?# BEGIN CODEX-EFFICIENT\n.*?# END CODEX-EFFICIENT\n?', '\n', s, flags=re.S)
 block = '''# BEGIN CODEX-EFFICIENT
 ## Efficient development context
-- For coding/repository tasks, use `$token-efficient-coding` when repo exploration or external developer tools are needed.
-- Prefer lazy `mcpq` discovery over re-enabling migrated stdio MCPs in the native Codex catalog.
+- Keep repository reads targeted: exact symbols/ranges/diffs first; use Atlas or SigMap only when orientation is actually needed.
+- Prefer native deferred tool discovery when available. Use `mcpq` only for services intentionally migrated after measuring schema/context overhead.
 # END CODEX-EFFICIENT
 '''
 s = s.rstrip() + ('\n\n' if s.strip() else '') + block
@@ -759,7 +773,7 @@ check() {
     fail=1
   fi
 }
-for c in codex rtk atlas sigmap serena mcp2cli mcpq headroom tokview rg fd; do check "\$c"; done
+for c in codex rtk ast-grep atlas sigmap serena mcp2cli mcpq headroom tokview rg fd; do check "\$c"; done
 printf '\n-- RTK/Codex hook --\n'
 rtk init --show --codex 2>/dev/null || true
 printf '\n-- MCP lazy services --\n'
@@ -826,7 +840,7 @@ cat <<'DONE'
 Instalação completa concluída.
 
 Uso diário:
-  codex                     Codex + RTK + skill + lazy MCP
+  codex                     Codex + RTK; optimization skill and lazy MCP remain on-demand
   codex-lean                Codex também passando pelo Headroom
   codex-metrics             Codex observado ao vivo pelo Tokview
   codex-savings             resumo de economia/uso
@@ -840,7 +854,7 @@ MCP lazy:
 
 Manutenção:
   codex-mcp-report          relatório de migração e backup
-  codex-mcp-migrate         migra novos MCPs stdio compatíveis adicionados depois
+  codex-mcp-migrate         opcional: migra MCPs stdio após medir necessidade
   codex-mcp-restore         rollback dos MCPs migrados
   codex-efficient-doctor    valida todo o ambiente
   codex-efficient-update    reaplica/atualiza todo o stack

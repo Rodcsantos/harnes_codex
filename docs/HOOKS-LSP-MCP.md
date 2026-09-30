@@ -3,24 +3,25 @@
 ## Hooks (`hooks/`, instalados em `~/.harness/hooks`)
 | Evento | Script | Faz | Desliga |
 |---|---|---|---|
-| SessionStart | session_start.py | branch, status, últimos commits e topo do plano (≈1 KB) | — |
-| PreToolUse | guard.py | bloqueia `rm -rf` amplo, force push, push em main/master, leitura de `.env`/chaves; pede aprovação em `reset --hard`, DROP/TRUNCATE, `kubectl delete`, `terraform apply`, `docker prune`... | `HARNESS_GUARD=off` |
-| PostToolUse | post_edit.py | formata e checa o arquivo editado (ruff, prettier/eslint locais, `php -l`, `bash -n`, JSON/TOML); silencioso se ok | `HARNESS_POST_EDIT=off` |
-| Stop | stop_gate.py | roda o verify se há mudanças; bloqueia no máx. 2× por sessão | `HARNESS_STOP_GATE=off` |
+| SessionStart | session_start.py | injeta só branch, dirty status e resumo do plano ativo; no Codex o bloco adicional é limitado | — |
+| PreToolUse | guard.py | bloqueia operações destrutivas, push direto em main/master e leitura de segredos | `HARNESS_GUARD=off` |
+| PostToolUse | post_edit.py | formata/checa somente o arquivo editado; fica silencioso se ok | `HARNESS_POST_EDIT=off` |
+| Stop | stop_gate.py | roda **somente** o verify explicitamente configurado e bloqueia no máximo 2× | `HARNESS_STOP_GATE=off` |
 
-Verify do projeto: `HARNESS_VERIFY_CMD`, ou `.harness/verify.sh` (modelo em `templates/project/.harness/`), ou padrões (pytest, `npm test`, `composer test`). Sem comando, o gate não faz nada.
+Verify do Stop gate: `HARNESS_VERIFY_CMD` ou `.harness/verify.sh`. Sem um deles, o hook não inventa `pytest`, `npm test` ou `composer test`; descoberta e ampliação de testes pertencem ao `flow-verify`.
 
-Códigos: exit 2 bloqueia e devolve o stderr ao agente. No Claude Code, comandos "arriscados mas legítimos" retornam `permissionDecision: ask`; no Codex viram bloqueio.
+No Claude Code, comandos arriscados mas legítimos podem pedir aprovação pelo hook. No Codex, o guard bloqueia a operação e exige aprovação explícita no fluxo do agente. O instalador limita o `additionalContext` do SessionStart no Codex para impedir que um working tree/plano grande consuma a janela.
 
-**Codex:** `install-harness.sh` grava em `~/.codex/hooks.json` com o mesmo esquema de eventos do Claude Code. Como o formato e o flag de hooks do Codex mudam entre versões, confira com `rtk init --show --codex` e `codex --help`; se divergir, ajuste `scripts/merge_hooks.py` (bloco `else`). Mesmo sem hooks no Codex, `AGENTS.md`, a CI e o `verifier` mantêm o gate.
+## LSP / code intelligence
+- Servidores: `scripts/install-lsp.sh python ts php` (Pyright + Ruff, typescript-language-server, Intelephense).
+- Claude Code: prefira plugins de code intelligence para definição, referências e diagnósticos; isso evita grep + leitura repetida.
+- Codex: use LSP/Serena sob demanda quando navegação por símbolos superar `rg`/Atlas/SigMap.
+- Piso determinístico: post-edit para erro barato e verify explícito para comportamento.
 
-## LSP
-- Servidores: `scripts/install-lsp.sh python ts php` (pyright + ruff, typescript-language-server, intelephense).
-- Claude Code: use plugins de code intelligence (`/plugin`) para definição, referências e diagnósticos em vez de grep + leitura de arquivo.
-- Codex: Serena (já no stack) cobre navegação semântica sob demanda.
-- Piso determinístico nos dois: o hook post-edit (sintaxe/lint) e o verify (tipos/testes).
-
-## MCP (poucos, sob demanda)
-- Padrão: context7 (docs de libs) e playwright (UI). Modelos em `config/mcp.claude.example.json` (copie para `.mcp.json` do projeto) e `config/codex-config.example.toml`.
-- Prefira CLI a MCP quando existir: `gh` em vez de GitHub MCP; `psql`/`mysql` com usuário **somente leitura** em vez de MCP de banco.
-- Cada MCP ativo custa contexto: habilite por projeto, não globalmente.
+## MCP e ferramentas externas
+- Habilite MCP por projeto e apenas quando necessário.
+- Claude Code já adia definições de ferramentas MCP por padrão; não replique catálogos inteiros em prompts e não migre MCPs para mcp2cli apenas por hábito.
+- Em stacks OpenAI que suportam tool search/deferred loading, prefira a descoberta nativa antes de wrappers.
+- `mcp2cli/mcpq` fica como camada de compatibilidade quando um cliente/servidor ainda mantém schemas residentes ou quando o CLI produzido é comprovadamente mais compacto.
+- Prefira uma CLI direta (`gh`, `psql`, `mysql`, etc.) quando ela expõe a mesma operação com menor overhead e permissões claras.
+- Context7 e Playwright são exemplos opcionais, não defaults universais. Ative-os só em projetos que realmente precisam de documentação dinâmica ou verificação de UI.

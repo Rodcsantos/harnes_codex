@@ -26,3 +26,14 @@ Shared: shared-api-design, shared-code-review, shared-production-readiness, shar
 flow-plan, flow-implement, flow-verify, flow-review, flow-ship.
 
 specialists/manifest.json é a lista canônica do pacote.
+
+## Instalação por perfil
+O catálogo completo permanece versionado, mas não deve ficar todo globalmente ativo por padrão.
+
+- `base`: `flow-*` + `shared-*` (padrão).
+- `python`, `php`, `react`, `mysql`, `postgres`, `redis`: adicionam somente o prefixo correspondente.
+- `django`: adiciona `django-*` + `python-*`.
+- Perfis podem ser combinados por vírgula.
+- `all`: instala as 70 skills e deve ficar restrito a laboratório ou projeto realmente multi-stack.
+
+Exemplo: `./scripts/install-harness.sh --engine both --skills react,php`.

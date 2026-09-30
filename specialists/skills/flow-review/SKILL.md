@@ -1,13 +1,15 @@
 ---
 name: flow-review
-description: "Independent review of the current diff by reviewer and, when relevant, security_reviewer. Use after verify passes and before commit or PR."
+description: "Run an independent diff review when risk or delivery stage justifies it. Use for PR/merge review, high-risk changes, or when repository policy requires an independent reviewer."
 ---
 
 # Flow: Review
 
-1. Compute the base (`git merge-base HEAD origin/main` or the branch base) and give reviewers the diff range, not the whole repo.
-2. Run `reviewer` always. Run `security_reviewer` too when the diff touches auth, input handling, secrets, dependencies, SQL, file access or infrastructure. They run in parallel with clean context.
-3. MUST-FIX items go back to the owning specialist, then re-run `flow-verify` and re-review only the changed hunks.
-4. Loop at most 2 rounds; then present the remaining findings to the user.
+1. Compute the exact diff range and provide reviewers only that diff plus the minimum surrounding code needed.
+2. Use `reviewer` for PR/merge or high-risk correctness review. Do not create an independent reviewer for every routine local edit.
+3. Add `security_reviewer` only when the diff touches a trust boundary: auth/authz, untrusted input, secrets, dependencies, SQL, filesystem/network access, uploads or infrastructure.
+4. Independent read-only reviews may run in parallel because their scopes do not overlap.
+5. MUST-FIX items go back to the owning context; re-run the smallest verification covering the fix and re-review only changed hunks.
+6. Cap review loops at two rounds.
 
-Output: verdict per reviewer plus the MUST-FIX list. Ignore style noise handled by formatters.
+Output only evidence-backed findings and a compact verdict. Ignore formatting/style noise enforced deterministically.

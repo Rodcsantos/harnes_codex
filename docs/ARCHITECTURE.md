@@ -1,21 +1,33 @@
 # Arquitetura do Harness
 
-WSL -> Codex CLI -> policy + specialists + skills + MCP + hooks + CLI diagnostics + memory.
+WSL -> Codex/Claude -> policy + specialists/skills sob demanda + hooks + diagnostics + ferramentas externas lazy.
 
 ## Responsabilidades
-- AGENTS.md: regras estáveis e normativas.
-- Agents: especialistas com escopo e guardrails.
-- Skills: procedimentos específicos carregados sob demanda.
-- MCP: capacidades/contexto externo; não duplicar shell/filesystem/git local sem necessidade.
-- Hooks e CI: enforcement determinístico.
-- LSP/CLI diagnostics: semântica, lint, type checking e testes.
-- Memory: contexto persistente útil, nunca a única fonte de políticas críticas.
+- `AGENTS.md`: regras estáveis, curtas e normativas.
+- Agents: especialização/isolamento/paralelismo quando o ganho supera o custo de um novo contexto.
+- Skills: procedimentos progressivos; catálogo fonte completo, instalação global seletiva por stack.
+- MCP/ferramentas: capacidades externas; descoberta deferred/lazy e CLI direta antes de schemas residentes.
+- Hooks e CI: enforcement determinístico com saída mínima.
+- LSP/code intelligence: definição, referências e diagnósticos sem leituras amplas.
+- Memory: opcional; nunca requisito ou única fonte de políticas críticas.
 
-## Fluxo
-pedido -> classificar domínio -> especialista mínimo -> evidência -> hipótese/design -> mudança focada -> validação -> diff/review -> conclusão com evidência.
+## Fluxo adaptativo
+`pedido -> evidência mínima -> mudança focada -> verificação proporcional ao risco -> conclusão`.
+
+Somente quando necessário:
+`unknowns -> explorer`; `trade-off arquitetural -> architect`; `cross-stack -> specialist/orchestrator`; `PR/alto risco -> reviewer`; `trust boundary -> security_reviewer`.
+
+O pipeline completo não é a unidade padrão de trabalho.
+
+## Contexto
+- Local conhecido: `rg`, range, diff ou símbolo.
+- Repo desconhecido: Atlas **ou** SigMap.
+- Navegação/refactor semântico: LSP/Serena.
+- Ferramentas externas: descoberta nativa deferred quando disponível; mcp2cli como compatibilidade medida.
+- Subagentes: independentes e limitados; cada um custa contexto/cota próprios.
 
 ## Produção
 Produção privilegia inspeção read-only, dry-run, backup, rollback e aprovação explícita para operações destrutivas.
 
 ## Dois CLIs, uma fonte
-`specialists/agents/*.toml` e `specialists/skills/` alimentam Codex e Claude Code (agentes do Claude são gerados). `AGENTS.md` é a política única; `CLAUDE.md` só a importa. Hooks em `hooks/` servem aos dois. Detalhes: `docs/TEAM.md` e `docs/HOOKS-LSP-MCP.md`.
+`specialists/agents/*.toml` alimenta os agentes Codex e gera `claude/agents/*.md`. `specialists/skills/` é o catálogo fonte; o instalador seleciona packs por stack para os dois CLIs. `AGENTS.md` é a política comum e `CLAUDE.md` contém apenas ajustes do cliente.

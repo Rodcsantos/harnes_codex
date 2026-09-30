@@ -1,17 +1,22 @@
+#:schema https://developers.openai.com/codex/config-schema.json
 # Example only. Merge deliberately into ~/.codex/config.toml.
 
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 8
-default_subagent_model = "gpt-5.6"
-default_subagent_reasoning_effort = "medium"
+# Multi-agent work multiplies context. Three concurrent subagents covers most
+# useful parallel exploration without opening eight independent contexts.
+max_concurrent_threads_per_session = 3
+default_subagent_model = "gpt-6-luna"
+default_subagent_reasoning_effort = "low"
 
-[features]
-memories = true
-
-[memories]
-generate_memories = true
-use_memories = true
+# Memories are intentionally not forced on by the harness. Enable them only
+# when persistent cross-session context has measured value for your workflow.
+# [features]
+# memories = true
+#
+# [memories]
+# generate_memories = true
+# use_memories = true
 
 [mcp_servers.context7]
 command = "npx"

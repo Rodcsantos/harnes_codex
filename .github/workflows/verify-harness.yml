@@ -18,7 +18,7 @@ jobs:
       - name: Validate shell and Python syntax
         run: |
           for f in scripts/*.sh specialists/install.sh specialists/uninstall.sh; do bash -n "$f"; done
-          python3 -m py_compile hooks/*.py scripts/*.py specialists/verify.py
+          python3 -m py_compile hooks/*.py scripts/*.py specialists/verify.py tests/*.py
 
       - name: Validate agents and skills
         run: python3 specialists/verify.py specialists
@@ -52,5 +52,5 @@ jobs:
       - name: Domain skills quality gate
         run: python3 -m unittest tests.test_skills -v
 
-      - name: Hook tests
-        run: python3 -m unittest discover -s tests -v
+      - name: Harness policy and hook tests
+        run: python3 -m unittest tests.test_agent_efficiency tests.test_hooks -v
