@@ -4,7 +4,7 @@ from pathlib import Path
 
 SKILLS = Path(__file__).resolve().parent.parent / "specialists" / "skills"
 REQUIRED = ("## Use when", "## Diagnose first", "## Verify")
-MAX_LINES, MAX_WORDS = 80, 650
+MAX_LINES, MAX_WORDS = 80, 650\nMAX_DESCRIPTION_CHARS = 320
 
 
 def domain_skills():
@@ -45,6 +45,32 @@ class DomainSkillTests(unittest.TestCase):
                     problems.append(f"{d.name}: missing '{sec}'")
         if problems:
             self.fail("\n" + "\n".join(problems[:15]) + f"\n({len(problems)} problems)")
+
+    def test_description_budget(self):
+        problems = []
+        for d in sorted(p for p in SKILLS.iterdir() if p.is_dir()):
+            text = (d / "SKILL.md").read_text()
+            m = re.search(r'^description:\\s*"?([^\\n"]+)"?\\s*
+        for d in domain_skills():
+            body = (d / "SKILL.md").read_text().split("\n---\n", 1)[-1]
+            lines, words = len(body.strip().splitlines()), len(body.split())
+            if lines > MAX_LINES or words > MAX_WORDS:
+                problems.append(f"{d.name}: {lines} lines, {words} words")
+        if problems:
+            self.fail("\n" + "\n".join(problems))
+
+
+if __name__ == "__main__":
+    unittest.main()
+, text, re.M)
+            if not m:
+                problems.append(f"{d.name}: missing description")
+                continue
+            desc = m.group(1).strip()
+            if len(desc) > MAX_DESCRIPTION_CHARS:
+                problems.append(f"{d.name}: description has {len(desc)} chars")
+        if problems:
+            self.fail("\\n" + "\\n".join(problems))
 
     def test_size_budget(self):
         problems = []
