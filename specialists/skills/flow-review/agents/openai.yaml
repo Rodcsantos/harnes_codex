@@ -1,0 +1,6 @@
+interface:
+  display_name: "Flow Review"
+  short_description: "Independent diff review and security check"
+  default_prompt: "Use $flow-review to run this stage of the engineering flow with evidence."
+policy:
+  allow_implicit_invocation: true

@@ -16,3 +16,6 @@ pedido -> classificar domínio -> especialista mínimo -> evidência -> hipótes
 
 ## Produção
 Produção privilegia inspeção read-only, dry-run, backup, rollback e aprovação explícita para operações destrutivas.
+
+## Dois CLIs, uma fonte
+`specialists/agents/*.toml` e `specialists/skills/` alimentam Codex e Claude Code (agentes do Claude são gerados). `AGENTS.md` é a política única; `CLAUDE.md` só a importa. Hooks em `hooks/` servem aos dois. Detalhes: `docs/TEAM.md` e `docs/HOOKS-LSP-MCP.md`.

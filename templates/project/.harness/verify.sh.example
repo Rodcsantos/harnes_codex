@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Project verify command used by the verifier agent and the Stop gate.
+# Copy to .harness/verify.sh, keep it fast, quiet on success, exit non-zero on failure.
+set -euo pipefail
+# Python:  ruff check . && pytest -q -x --tb=short
+# Node:    npm run -s lint && npm run -s typecheck && npm test --silent
+# PHP:     composer test
+echo "configure .harness/verify.sh" >&2; exit 0
