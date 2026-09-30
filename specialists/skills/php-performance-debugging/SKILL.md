@@ -1,35 +1,32 @@
 ---
 name: php-performance-debugging
-description: "Diagnose PHP latency and memory using profiling, Xdebug, DB evidence, and OPcache context. Use when work involves php performance debugging."
+description: "Profile and debug PHP performance and runtime problems: OPcache, FPM, slow requests, memory and profilers. Use when PHP requests are slow, workers exhaust, memory limits hit, or production errors are hard to reproduce."
 ---
 
 # PHP Performance Debugging
 
-Diagnose PHP latency and memory using profiling, Xdebug, DB evidence, and OPcache context.
+## Use when
+- High TTFB, FPM `max_children reached`, memory exhausted, slow scripts, or intermittent 500s.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- Runtime: `php -v; php -m | grep -iE "opcache|xdebug|pcntl"`; `php -i | grep -E "opcache.enable|memory_limit|max_execution_time"`. Xdebug slows production heavily: it should be off there.
+- FPM: pool config (`pm`, `pm.max_children`), status page (`pm.status_path`), `slowlog` with `request_slowlog_timeout` for stack traces of slow requests.
+- Profilers: Blackfire, XHProf/Tideways, or Xdebug profiler in staging; look at inclusive time and call counts.
+- Logs: PHP error log and framework logs correlated with a request id; database slow log for query time.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Most slowness is I/O: fix query count/slow queries, remote calls (timeouts, parallelism, caching) before micro-optimizing PHP.
+- OPcache on in production (`opcache.validate_timestamps=0` with deploy-time reset, confirm your deploy process), enough `opcache.memory_consumption`, and preloading only if measured.
+- Size `pm.max_children` from memory: available RAM / average worker RSS; too many children causes swapping.
+- Memory growth in long-running workers (queues, Octane/Swoole): avoid static caches, free large arrays, use generators/`chunk`; restart workers after N jobs.
+- Cache expensive results (APCu, Redis, framework cache) with explicit invalidation.
+- Autoload optimization: `composer install --optimize-autoloader --classmap-authoritative` in production builds.
 
-## Focus checks
-- reproduce first.
-- separate PHP vs DB/I/O time.
-- profile representative requests.
-- verify OPcache/runtime settings.
+## Anti-patterns
+- Enabling Xdebug or verbose logging in production; raising `memory_limit` to hide leaks; guessing without a profile; unbounded `foreach` over ORM collections.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing FPM/OPcache settings restarts workers and affects live traffic: reload in a window, keep the previous config, get approval. Profilers on production only with sampling and approval.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Profile or slowlog shows the hotspot reduced; p95 latency and error rate improved under similar load; memory per worker stable over time.

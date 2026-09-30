@@ -1,35 +1,33 @@
 ---
 name: php-database
-description: "Use PDO or framework ORM securely with transactions, binding, and predictable error behavior. Use when work involves php database."
+description: "Use PHP database access safely and efficiently with PDO or ORM: prepared statements, transactions, N+1 and migrations. Use when writing queries, fixing slow endpoints, handling transactions or connection issues in PHP."
 ---
 
 # PHP Database
 
-Use PDO or framework ORM securely with transactions, binding, and predictable error behavior.
+## Use when
+- New queries, ORM relation problems, slow list pages, transaction bugs, connection limits, or SQL injection risk.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- Which layer is used (PDO, Eloquent, Doctrine, query builder) and the DB engine/version.
+- Query count per request: Laravel `DB::listen`/Debugbar/Telescope, Doctrine profiler, or enable the DB slow log.
+- Find raw SQL built by concatenation: `grep -rnE "(query|exec)\(.*\\$|\\.\s*\\$_(GET|POST|REQUEST)" --include=*.php`.
+- Run `EXPLAIN` on the suspicious statement (see mysql/postgres skills).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Always prepared statements with bound parameters (PDO `prepare/execute`, `?`/named); PDO with `ERRMODE_EXCEPTION`, real prepares (`ATTR_EMULATE_PREPARES=false` where supported), `utf8mb4`.
+- Identifiers and sort columns cannot be bound: whitelist them.
+- N+1: eager load (`with()` in Eloquent, `JOIN FETCH`/`EXTRA_LAZY` tuning in Doctrine); select only needed columns; paginate; chunk (`chunkById`) large jobs.
+- Transactions: `beginTransaction/commit/rollBack` (or `DB::transaction`) around dependent writes; keep short; retry on deadlock; no HTTP calls inside.
+- Lost updates: `SELECT ... FOR UPDATE` (`lockForUpdate()`) or atomic `UPDATE ... SET n=n+1`.
+- Migrations via the framework's tool, reviewed like code; large-table changes follow zero-downtime steps.
+- Persistent connections and pool limits: watch total connections across FPM workers.
 
-## Focus checks
-- parameterize all untrusted values.
-- define transaction boundary.
-- avoid N+1.
-- map DB errors deliberately.
+## Anti-patterns
+- String-concatenated SQL; `SELECT *` in hot paths; queries in loops; catching `PDOException` and ignoring it; mass assignment of request data.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Schema changes, bulk updates/deletes and raw SQL with user input need approval and review; test destructive statements on a copy first.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Injection attempts in tests return safe results; query count/`EXPLAIN` improved; transaction rollback test proves atomicity; migration runs up and down.

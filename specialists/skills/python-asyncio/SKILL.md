@@ -1,35 +1,32 @@
 ---
 name: python-asyncio
-description: "Design and debug asyncio concurrency, cancellation, timeouts, and resource lifecycles. Use when work involves python asyncio."
+description: "Write and debug Python asyncio code: tasks, cancellation, blocking calls, concurrency limits and timeouts. Use when async code hangs, leaks tasks, blocks the event loop, or mixes sync and async incorrectly."
 ---
 
 # Python Asyncio
 
-Design and debug asyncio concurrency, cancellation, timeouts, and resource lifecycles.
+## Use when
+- Hangs or slowness in async services, `Task was destroyed but it is pending`, un-awaited coroutines, blocking libraries inside async handlers, unbounded concurrency.
 
-## Domain rules
-Follow the project Python version, pyproject/tooling, typing conventions, and dependency manager. Prefer standard-library solutions when adequate.
+## Diagnose first
+- `python -X dev` and `PYTHONASYNCIODEBUG=1` (or `asyncio.run(main(), debug=True)`): slow callback warnings, un-awaited coroutine warnings.
+- Find blocking calls in async paths: `requests`, `time.sleep`, sync DB drivers, heavy CPU, file I/O: `grep -rn "requests\.\|time.sleep" --include=*.py`.
+- Dump tasks when hung: `asyncio.all_tasks()` and their stacks; `py-spy dump --pid <pid>`.
+- Python version (`TaskGroup` and `asyncio.timeout` need 3.11+).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Run independent I/O concurrently with `asyncio.gather` or, on 3.11+, `asyncio.TaskGroup` (structured: failures cancel siblings). Keep references to tasks created with `create_task`.
+- Bound concurrency with `asyncio.Semaphore` or a queue with fixed workers; never spawn one task per item of an unbounded input.
+- Timeouts everywhere on external I/O: `asyncio.timeout()` (3.11+) or `asyncio.wait_for`.
+- Blocking or CPU-bound work: `await asyncio.to_thread(fn)` or a process pool; do not call it directly in a coroutine.
+- Cancellation: let `CancelledError` propagate; clean up in `finally`; do not swallow it with bare `except`.
+- Use async-native clients (httpx, asyncpg, aiohttp) inside async code; one event loop per process; never call `asyncio.run` inside a running loop.
 
-## Focus checks
-- propagate cancellation correctly.
-- bound concurrency.
-- use explicit timeouts.
-- avoid blocking calls on event loop.
+## Anti-patterns
+- Fire-and-forget `create_task` without storing the reference; `await` in a tight loop when calls are independent; sharing an async client across loops; `loop.run_until_complete` inside async code.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing concurrency limits or timeouts alters load on downstream services: tune with metrics and approval for production.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Test with `pytest-asyncio`/`anyio`: cancellation, timeout and failure paths; measure latency and concurrency before/after; debug mode shows no slow callbacks or un-awaited coroutines.

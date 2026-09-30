@@ -1,35 +1,31 @@
 ---
 name: redis-streams-queues
-description: "Design Streams/consumer groups, retries, pending entries, idempotency, and poison handling. Use when work involves redis streams and queues."
+description: "Build reliable queues and event flows on Redis Streams, lists or pub/sub. Use when choosing a queue primitive, consumers lose or duplicate messages, or pending entries and stream size grow."
 ---
 
 # Redis Streams and Queues
 
-Design Streams/consumer groups, retries, pending entries, idempotency, and poison handling.
+## Use when
+- Background jobs, event fan-out, or worker pools using Redis; messages stuck, retried forever or lost.
 
-## Domain rules
-Assume production safety and latency matter. Prefer bounded SCAN/sampling; never use destructive global commands without explicit approval.
+## Diagnose first
+- Which primitive is used and what delivery guarantee is required (at-most-once, at-least-once).
+- `XLEN s`, `XINFO STREAM s`, `XINFO GROUPS s`, `XINFO CONSUMERS s g`, `XPENDING s g` (count, min/max id, per consumer).
+- For lists: `LLEN`, and check whether workers use `BRPOPLPUSH`/`BLMOVE` for reliable handoff.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Pub/sub: fire-and-forget, no persistence or replay. Lists: simple queues, reliable only with a processing list. Streams: persistent log with consumer groups, acknowledgements and replay: the default for reliable work.
+- Consumer group flow: `XGROUP CREATE`, read with `XREADGROUP ... >`, process, then `XACK`. Unacked entries stay in the PEL.
+- Recover crashed consumers with `XAUTOCLAIM` (or `XCLAIM`) after an idle threshold; count deliveries and move poison messages to a dead-letter stream after N attempts.
+- Delivery is at-least-once: handlers must be idempotent (idempotency key or upsert).
+- Bound the stream: `XADD ... MAXLEN ~ N` or `MINID` trimming, chosen with retention needs; approximate trimming is cheaper.
+- Scale by adding consumers to the group; partition streams by key when ordering per key matters.
 
-## Focus checks
-- inspect PEL.
-- define retry/dead-letter strategy.
-- make consumers idempotent.
-- monitor lag/backlog.
+## Anti-patterns
+- Acknowledging before processing; never claiming pending entries; unbounded streams; using pub/sub for jobs that must not be lost; large payloads instead of references.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+`XTRIM`, `XGROUP DESTROY`, `XGROUP SETID`, `DEL` on a stream drop or replay data: approval required. Replays need consumers that are idempotent.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Kill a consumer mid-message and confirm the message is reclaimed and processed once effectively; `XPENDING` drains to zero under load; stream length stays bounded; dead-letter path tested.

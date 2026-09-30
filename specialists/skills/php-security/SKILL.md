@@ -1,35 +1,33 @@
 ---
 name: php-security
-description: "Review PHP apps for injection, auth/authz, sessions, uploads, SSRF, traversal, and disclosure. Use when work involves php security."
+description: "Review and harden PHP applications against injection, XSS, CSRF, insecure uploads, weak auth and unsafe configuration. Use when handling user input, sessions, passwords, file uploads, or auditing a PHP codebase."
 ---
 
 # PHP Security
 
-Review PHP apps for injection, auth/authz, sessions, uploads, SSRF, traversal, and disclosure.
+## Use when
+- New forms/endpoints, authentication work, file upload features, security review, or dependency and configuration hardening.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- Static analysis: `phpstan` with security-minded rules, `psalm --taint-analysis` if configured, `composer audit`.
+- Grep sinks: `grep -rnE "eval\(|unserialize\(|shell_exec|exec\(|system\(|passthru|include\s*\(?\s*\\$|md5\(|sha1\(|mysqli_query\(.*\\$|echo\s+\\$_(GET|POST)" --include=*.php`.
+- Config: `php -i | grep -E "display_errors|expose_php|session.cookie_(secure|httponly|samesite)|allow_url_include"`.
+- Trace input from `$_GET/$_POST/$_FILES/headers` to output, query, command and filesystem sinks.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- SQL: prepared statements only. Output: escape by context (`htmlspecialchars($s, ENT_QUOTES, 'UTF-8')` or the template engine's autoescape); never disable autoescape for user data.
+- Passwords: `password_hash`/`password_verify` (bcrypt/argon2), rehash with `password_needs_rehash`; compare secrets with `hash_equals`; tokens from `random_bytes`/`random_int`.
+- CSRF tokens on state-changing session requests; session cookies `Secure`, `HttpOnly`, `SameSite`; `session_regenerate_id(true)` after login.
+- `unserialize()` on untrusted data is dangerous: use `json_decode` or `allowed_classes`.
+- Uploads: validate size and detected MIME (`finfo`), generate server-side names, store outside the web root or with no-execute, never trust the client filename or extension.
+- `display_errors=Off` in production, errors to logs; keep `allow_url_include` off; restrict `open_basedir` where practical.
+- Authorization on every object, not just login.
 
-## Focus checks
-- server-side authorization.
-- safe uploads and paths.
-- secure cookie/session settings.
-- no secrets in errors/logs.
+## Anti-patterns
+- `md5`/`sha1` for passwords; `extract($_POST)`; `include` with user-controlled paths; CORS `*` with cookies; secrets in the repository or logs; trusting `X-Forwarded-*` from anyone.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Rotate exposed secrets with the owner's approval; never run exploit tests against production; changes to auth flows need review.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Tests/payloads for injection, XSS, CSRF and traversal are rejected; `composer audit` and static analysis clean or triaged; production `php -i` values confirmed.

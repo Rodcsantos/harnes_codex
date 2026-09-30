@@ -1,35 +1,32 @@
 ---
 name: django-transactions
-description: "Design atomic boundaries, locking, idempotency, and on_commit behavior. Use when work involves django transactions."
+description: "Use Django transactions correctly: atomic blocks, on_commit hooks, locking and concurrency-safe updates. Use when writes must be all-or-nothing, race conditions or lost updates appear, or side effects fire before commit."
 ---
 
 # Django Transactions
 
-Design atomic boundaries, locking, idempotency, and on_commit behavior.
+## Use when
+- Multi-step writes, double-spend or counter races, emails/tasks triggered before data is committed, `TransactionManagementError`, deadlocks.
 
-## Domain rules
-Follow the project Django version and installed ecosystem. Treat ORM query behavior, migrations, permissions, and transactions as production concerns.
+## Diagnose first
+- `DATABASES['default']['ATOMIC_REQUESTS']` and `AUTOCOMMIT`, and the isolation level in `OPTIONS`.
+- Find write sequences without `transaction.atomic`, and side effects (tasks, emails, HTTP) inside atomic blocks.
+- Reproduce races with two threads/processes in a test using `TransactionTestCase`.
+- Database-side lock evidence: see mysql/postgres transactions-locking skills.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Wrap dependent writes in `with transaction.atomic():`; nested atomic creates savepoints; catching `IntegrityError` inside must happen outside the atomic block that failed (or use a nested block).
+- Side effects after commit: `transaction.on_commit(lambda: task.delay(...))`; in tests `TestCase` needs `captureOnCommitCallbacks(execute=True)`.
+- Prevent lost updates: `select_for_update()` inside `atomic` for read-modify-write, or atomic SQL updates with `F()` expressions (`update(count=F('count')+1)`).
+- Lock in a consistent order to avoid deadlocks; keep blocks short; retry on deadlock/serialization errors.
+- `ATOMIC_REQUESTS=True` is simple but holds a transaction for the whole request; opt out for slow views.
+- `select_for_update(skip_locked=True)` for workers on databases that support it.
 
-## Focus checks
-- keep transactions short.
-- use select_for_update deliberately.
-- avoid network I/O inside long transactions.
-- handle retries/idempotency.
+## Anti-patterns
+- Network calls inside `atomic`; swallowing exceptions inside a transaction and continuing; `save()` read-modify-write without locks; assuming `TestCase` transactions reveal commit behavior.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing isolation level or `ATOMIC_REQUESTS` globally affects all code paths: approval and staged rollout required.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Concurrency test (threads with `TransactionTestCase`) proves no lost update; failure injection shows full rollback; on_commit side effect fires once, only after commit.

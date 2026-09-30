@@ -1,35 +1,31 @@
 ---
 name: redis-locking-rate-limit
-description: "Implement bounded distributed locks and rate limits with explicit failure semantics. Use when work involves redis locks and rate limits."
+description: "Implement Redis distributed locks and rate limiters correctly with atomic operations. Use when adding mutual exclusion, idempotency guards, or request throttling backed by Redis."
 ---
 
 # Redis Locks and Rate Limits
 
-Implement bounded distributed locks and rate limits with explicit failure semantics.
+## Use when
+- Preventing duplicate job runs, guarding a critical section across processes, limiting API calls per user/IP/key.
 
-## Domain rules
-Assume production safety and latency matter. Prefer bounded SCAN/sampling; never use destructive global commands without explicit approval.
+## Diagnose first
+- Is a lock really needed? Prefer database constraints, idempotency keys or a single consumer per partition when they solve it.
+- Check failure model: what happens if the holder crashes, pauses (GC), or the Redis primary fails over?
+- Existing code: are `SETNX` + `EXPIRE` done as two commands (race)?
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Acquire: one command `SET lock:key <unique-token> NX PX <ttl>`. Release: Lua compare-and-delete (`if GET==token then DEL`), never plain `DEL`.
+- TTL must exceed worst-case work time; long work needs a renewal (only by the owner, checking the token) or a fencing token checked by the protected resource.
+- A single-Redis lock is best-effort, not a strict mutual exclusion guarantee (failover can lose it; pauses can outlive the TTL). For correctness-critical cases use fencing tokens at the resource or a consensus system.
+- Rate limit: fixed window (`INCR` + `EXPIRE` on first hit, set atomically via Lua) is simplest; sliding window or token bucket via sorted set/Lua for smoother limits.
+- Make limiter and lock scripts atomic with Lua or `SET ... NX EX`; return remaining/reset values for clients.
+- Fail-open or fail-closed on Redis errors: decide explicitly per endpoint.
 
-## Focus checks
-- unique lock token.
-- safe conditional release.
-- bounded TTL.
-- define clock/window semantics for rate limit.
+## Anti-patterns
+- Lock without token or TTL; `EXPIRE` after `SETNX` as separate calls; per-request `KEYS` scans; limiter keys with unbounded cardinality and no TTL.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Force-deleting lock keys or resetting limiter keys in production needs approval and knowledge of who holds them.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Concurrent test (many workers) proves only one holder at a time and safe release after crash/timeouts; limiter test at boundary counts; behavior on Redis outage is exercised.

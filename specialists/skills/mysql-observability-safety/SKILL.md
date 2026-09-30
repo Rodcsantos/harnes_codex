@@ -1,35 +1,34 @@
 ---
 name: mysql-observability-safety
-description: "Inspect connections, waits, resource usage, security, and maintenance without destructive shortcuts. Use when work involves mysql observability safety."
+description: "Gather MySQL evidence with performance_schema and sys and apply operational safety rules. Use when investigating a live incident, before any DDL or bulk write, or when defining monitoring for a MySQL instance."
 ---
 
 # MySQL Observability Safety
 
-Inspect connections, waits, resource usage, security, and maintenance without destructive shortcuts.
+## Use when
+- Live slowness or saturation with unknown cause.
+- Before running DDL, mass UPDATE/DELETE, or granting privileges on production.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- Active work: `SELECT * FROM sys.processlist WHERE command<>'Sleep' ORDER BY time DESC LIMIT 20;`
+- Top statements: `SELECT * FROM sys.statement_analysis ORDER BY total_latency DESC LIMIT 10;`
+- Waits and I/O: `SELECT * FROM sys.waits_global_by_latency LIMIT 10;` `SELECT * FROM sys.io_global_by_file_by_latency LIMIT 10;`
+- Connections: `SHOW GLOBAL STATUS LIKE 'Threads_%'; SHOW GLOBAL STATUS LIKE 'Aborted_%';`
+- Confirm `performance_schema=ON` and the instruments you need are enabled.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Read-only first: collect, then decide. Prefer a replica for heavy diagnostic queries.
+- Before bulk writes: run the equivalent `SELECT COUNT(*)` with the same WHERE, note the count, chunk the change (for example 1-5k rows per transaction) with a pause, and keep a way back.
+- Wrap a risky UPDATE/DELETE in an explicit transaction only when you will review the affected rows before `COMMIT`.
+- Least privilege: separate read-only, app and admin accounts; avoid `%` hosts and `GRANT ALL`.
+- Metadata locks queue behind long transactions: check `performance_schema.metadata_locks` and long-running trx before DDL.
 
-## Focus checks
-- least privilege.
-- bound diagnostic queries.
-- avoid disruptive table scans.
-- document risky commands before execution.
+## Anti-patterns
+- `KILL` without knowing what the connection holds; diagnostics that themselves scan large tables on the primary; enabling every instrument permanently.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Approval required for: DDL, `KILL`, bulk DML, `SET GLOBAL`, privilege changes, `FLUSH`, `RESET`. State expected impact and rollback before running.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- The suspected cause is confirmed by at least two independent signals (statement stats and waits, for example).
+- After a change, the same queries show the metric moved and no new errors in the error log.

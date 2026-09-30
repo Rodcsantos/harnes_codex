@@ -1,35 +1,32 @@
 ---
 name: python-testing
-description: "Build focused pytest suites with fixtures, parametrization, mocks, and integration boundaries. Use when work involves python testing."
+description: "Write reliable Python tests with pytest: fixtures, parametrization, mocking boundaries and determinism. Use when adding or fixing tests, flaky or slow suites, or deciding what to mock."
 ---
 
 # Python Testing
 
-Build focused pytest suites with fixtures, parametrization, mocks, and integration boundaries.
+## Use when
+- New behavior needs tests, a bug needs a regression test, tests are flaky, slow, or too coupled to implementation.
 
-## Domain rules
-Follow the project Python version, pyproject/tooling, typing conventions, and dependency manager. Prefer standard-library solutions when adequate.
+## Diagnose first
+- `pytest -q -x --lf` (last failed), `pytest --durations=10` (slowest), `pytest -p no:randomly` vs `-p randomly` to expose order dependence, `pytest --collect-only -q | tail`.
+- Config: `pyproject.toml`/`pytest.ini` markers, `conftest.py` fixtures, coverage settings (`pytest --cov=pkg --cov-report=term-missing`).
+- For a flaky test: run it 50 times (`pytest --count=50` with pytest-repeat, or a shell loop) and note failure conditions.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Test behavior through public interfaces; assert outcomes, not call sequences. One reason to fail per test.
+- Bug fix: write the failing test first, see it fail for the right reason, then fix.
+- `pytest.mark.parametrize` for input tables; fixtures for setup with the narrowest scope that stays fast; `tmp_path` for files; `monkeypatch` for env/attrs.
+- Mock only at boundaries you do not own (network, clock, payment APIs); use real DBs (containers/transactions) for persistence logic when feasible.
+- Determinism: freeze time (`freezegun`/`time-machine`), seed randomness, no sleeps (poll with timeouts), no reliance on test order or shared state.
+- Coverage is a signal for untested branches, not a target to game.
+- Async code: `pytest-asyncio` or `anyio` with explicit modes.
 
-## Focus checks
-- test observable behavior.
-- avoid over-mocking internals.
-- make time/randomness deterministic.
-- cover failures and cleanup.
+## Anti-patterns
+- Tests that mirror the implementation line by line; over-mocking so nothing real runs; shared mutable fixtures; assert-free tests; `sleep()` for synchronization; catching exceptions inside tests to make them pass.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Never point tests at production databases or real third-party accounts; guard with environment checks and dedicated test credentials.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- New test fails without the change and passes with it; full suite green and stable across repeated and random-order runs; slowest tests noted.

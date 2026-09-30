@@ -1,35 +1,33 @@
 ---
 name: react-performance
-description: "Use profiler/network/bundle evidence to reduce rerenders, waterfalls, and excessive JavaScript. Use when work involves react performance."
+description: "Measure and fix React performance: unnecessary renders, expensive computations, list virtualization, bundle size and Web Vitals. Use when the UI feels slow, interactions lag, bundles are large, or Lighthouse/INP scores are poor."
 ---
 
 # React Performance
 
-Use profiler/network/bundle evidence to reduce rerenders, waterfalls, and excessive JavaScript.
+## Use when
+- Typing or scrolling lag, slow route transitions, large bundles, or regressions after adding a feature.
 
-## Domain rules
-Follow package.json/lockfile, React/TypeScript/build-tool versions, router/state/data libraries, and existing component/design-system conventions.
+## Diagnose first
+- React DevTools Profiler: record the interaction, find components with long or frequent commits and "why did this render".
+- Browser Performance panel for long tasks and layout thrash; Lighthouse/Web Vitals (LCP, INP, CLS) on a production build, not dev mode.
+- Bundle: `vite-bundle-visualizer`, `source-map-explorer`, or `next build` output; check what is imported on first load.
+- Confirm React version and whether the React Compiler is in use (it auto-memoizes; manual memo may be redundant: confirm).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Measure, fix the biggest offender, measure again.
+- Reduce work first: move state down or split components so fewer subtrees re-render; avoid new object/array/function props to memoized children.
+- Then memoize: `React.memo` on expensive pure components, `useMemo` for costly derivations, `useCallback` only for stable props to memoized children or effects.
+- Long lists: virtualize (`@tanstack/react-virtual`, react-window); paginate or window server data.
+- Heavy updates that can lag: `useTransition`/`useDeferredValue` (React 18+) to keep input responsive; debounce expensive handlers.
+- Split the bundle: route-level `React.lazy` + `Suspense`, dynamic imports for heavy libraries, tree-shakeable imports, remove unused dependencies, optimize images (dimensions, modern formats, lazy loading).
+- Context that changes often re-renders all consumers: split contexts or use selector-based stores.
 
-## Focus checks
-- measure first.
-- fix state ownership before memoization.
-- inspect request waterfalls.
-- analyze bundle only when relevant.
+## Anti-patterns
+- Wrapping everything in `memo`/`useMemo`; optimizing in dev mode; inline object props defeating memo; loading all routes eagerly; huge state in a top-level context.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Performance refactors risk stale UI or behavior changes: keep behavior tests and review caching/memoization correctness before merge.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Profiler shows fewer/faster commits for the same interaction; production Web Vitals or Lighthouse improved; bundle size reduced; behavior tests still pass.

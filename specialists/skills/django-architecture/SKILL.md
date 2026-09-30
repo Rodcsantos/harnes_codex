@@ -1,35 +1,32 @@
 ---
 name: django-architecture
-description: "Organize Django apps, services, boundaries, and side effects for maintainability. Use when work involves django architecture."
+description: "Structure Django projects into cohesive apps with clear service, model and view boundaries. Use when a Django codebase has fat views or models, circular imports, unclear app boundaries or scattered business logic."
 ---
 
 # Django Architecture
 
-Organize Django apps, services, boundaries, and side effects for maintainability.
+## Use when
+- Deciding where logic lives, splitting or merging apps, untangling imports, or preparing a project to scale in size or team.
 
-## Domain rules
-Follow the project Django version and installed ecosystem. Treat ORM query behavior, migrations, permissions, and transactions as production concerns.
+## Diagnose first
+- `python manage.py check --deploy` is for production; for structure run `python manage.py showmigrations --plan | tail` and list apps in `INSTALLED_APPS`.
+- Import graph and hot spots: `grep -rn "^from .*models import" --include=*.py app/ | head`, look for cycles and views importing many apps.
+- Find fat views/models: `wc -l */views.py */models.py | sort -n | tail`.
+- Check versions: `python -m django --version`, `python --version`, and settings layout (`base`/`prod`).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- An app owns one domain concept and its models; cross-app access goes through a small public surface (services/selectors), not by reaching into another app's internals.
+- Views (or DRF viewsets) parse input, call a service, return output. Multi-step business rules go in service functions; read queries in selectors/managers.
+- Model methods for behavior that concerns one instance; managers/querysets for reusable filters.
+- Signals only for decoupled side effects; hidden business flow in signals is hard to trace: prefer explicit calls.
+- Settings from environment, split by environment, no secrets in the repo.
+- Follow the project's existing conventions before introducing a new layer.
 
-## Focus checks
-- map request-to-domain path.
-- keep business rules out of templates/views when complex.
-- avoid signal-hidden critical flows.
-- respect app boundaries.
+## Anti-patterns
+- Business logic in templates or serializers; `import *`; god `utils.py`; circular FK strings avoided by moving code instead of fixing boundaries; adding a service layer for CRUD that needs none.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Moving models between apps needs migration care (`SeparateDatabaseAndState`) and approval; renaming apps changes table names and content types.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `python manage.py check` and `makemigrations --check --dry-run` clean; test suite passes; import cycles gone; a change to one domain touches one app.

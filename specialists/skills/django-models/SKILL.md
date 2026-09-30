@@ -1,35 +1,32 @@
 ---
 name: django-models
-description: "Design models, constraints, indexes, managers, and invariants around real access patterns. Use when work involves django models."
+description: "Design Django models, constraints, managers and relations that keep data valid and queries simple. Use when creating or changing models, fields, relations, Meta options or custom managers."
 ---
 
 # Django Models
 
-Design models, constraints, indexes, managers, and invariants around real access patterns.
+## Use when
+- New entities, field type choices, uniqueness/validation rules, deletion behavior, or repeated query logic that belongs in a manager.
 
-## Domain rules
-Follow the project Django version and installed ecosystem. Treat ORM query behavior, migrations, permissions, and transactions as production concerns.
+## Diagnose first
+- `python manage.py inspectdb` only for legacy DBs; otherwise read existing models and `Meta` conventions.
+- `python manage.py sqlmigrate` after a change to see the DDL; `python manage.py check`.
+- Look for missing indexes on filtered/ordered fields: `grep -rn "filter(\|order_by(" app/ | head`.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Put invariants in the database with `Meta.constraints` (`UniqueConstraint`, `CheckConstraint`) plus model `clean()` for friendly errors; validators alone are not enforcement.
+- `on_delete` is a business decision: `PROTECT` for data that must not vanish, `CASCADE` for owned children, `SET_NULL` only with `null=True`.
+- `null=True` on strings is usually wrong (use `blank=True` with empty string); nullable only when absence is meaningful.
+- Use `TextChoices`/`IntegerChoices` for enumerations; `DecimalField` for money; `DateTimeField` with `USE_TZ=True`.
+- Reusable filters as `QuerySet` methods exposed through `Manager.from_queryset`; default managers should not hide rows surprisingly.
+- Add `db_index`/`Meta.indexes` for real query patterns, and `related_name` on relations for clarity.
+- Avoid `save()` overrides for logic that must run on `bulk_create`/`update` (they bypass it).
 
-## Focus checks
-- prefer DB constraints for durable invariants.
-- check null/blank semantics.
-- design indexes from queries.
-- avoid model methods with surprising I/O.
+## Anti-patterns
+- Generic FKs everywhere; JSONField as a schema escape hatch for core fields; many-to-many without an explicit `through` when the link has attributes; business logic in signals.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Field type changes, renames and constraint additions on populated tables need migration review (see django-migrations) and approval.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Constraint tests (violation raises `IntegrityError`), `makemigrations --check`, `sqlmigrate` reviewed, model tests pass.

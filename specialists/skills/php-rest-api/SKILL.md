@@ -1,35 +1,33 @@
 ---
 name: php-rest-api
-description: "Implement version-compatible REST endpoints, validation, auth boundaries, and error responses. Use when work involves php rest apis."
+description: "Design and implement REST APIs in PHP with correct HTTP semantics, validation, auth and error handling. Use when adding or changing endpoints in Laravel/Symfony/Slim or plain PHP, or defining API contracts."
 ---
 
 # PHP REST APIs
 
-Implement version-compatible REST endpoints, validation, auth boundaries, and error responses.
+## Use when
+- New resources, validation or auth gaps, inconsistent status codes, pagination, versioning, or API performance problems.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- Framework and version, routing files, middleware stack, existing response/error format.
+- List routes: `php artisan route:list` (Laravel) or `bin/console debug:router` (Symfony).
+- Read one existing endpoint end to end (route, request validation, controller, resource/serializer) and follow its conventions.
+- Test with `curl -i` for status codes, headers and error shape.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Correct verbs and status codes: 200/201 (+`Location`)/204, 400 malformed, 401 unauthenticated, 403 forbidden, 404, 409 conflict, 422 validation, 429 throttled.
+- Validate input with the framework's request validation (Form Requests, Symfony Validator/constraints); never trust or mass-assign raw request data; whitelist fillable fields.
+- Authorization on every object (policies/voters), scoped queries by user/tenant to prevent IDOR.
+- Consistent JSON error format (code, message, field errors); do not leak stack traces or SQL.
+- Lists: pagination (cursor for large sets), filtering/sorting whitelists, and eager loading to avoid N+1.
+- Idempotency for retried writes (idempotency key or PUT semantics); rate limiting on auth and expensive routes.
+- Evolve compatibly: add fields, deprecate before removing; version when breaking.
 
-## Focus checks
-- preserve HTTP contracts.
-- validate request payloads.
-- avoid leaking internals.
-- test auth and failure paths.
+## Anti-patterns
+- Returning 200 with error payloads; exposing model attributes wholesale; verbs in URLs (`/getUser`); business logic in controllers; CORS `*` with credentials.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing response shapes, status codes or auth on a consumed API is a breaking change: approval and deprecation path needed.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Feature tests for success, validation failure (422), unauthenticated, forbidden and not found; query count bounded; contract (OpenAPI) diff shows only intended changes.

@@ -1,35 +1,32 @@
 ---
 name: django-auth-permissions
-description: "Implement authentication plus action/object-level authorization safely. Use when work involves django auth permissions."
+description: "Implement Django authentication, authorization, object-level permissions and secure session handling. Use when adding login, roles or permissions, protecting views/APIs, or reviewing access control gaps."
 ---
 
 # Django Auth Permissions
 
-Implement authentication plus action/object-level authorization safely.
+## Use when
+- New protected endpoints, role-based access, multi-tenant data isolation, custom user model, or an IDOR/permission bug.
 
-## Domain rules
-Follow the project Django version and installed ecosystem. Treat ORM query behavior, migrations, permissions, and transactions as production concerns.
+## Diagnose first
+- `grep -rn "AUTH_USER_MODEL\|AUTHENTICATION_BACKENDS\|SESSION_\|CSRF_\|REST_FRAMEWORK" settings*/ config/ 2>/dev/null`
+- List views/routes without protection: check for missing `LoginRequiredMixin`, `@login_required`, `permission_classes`, or DRF `DEFAULT_PERMISSION_CLASSES`.
+- Find queries that trust ids from the request: `get_object_or_404(Model, pk=pk)` without an ownership/tenant filter.
+- `python manage.py check --deploy` for cookie and HTTPS flags.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Use a custom user model from the start (`AUTH_USER_MODEL`); changing it later is painful.
+- Authentication is not authorization: every object access must filter by owner/tenant/permission in the queryset (`Model.objects.filter(owner=request.user)`), not only check a login.
+- Django permissions (`has_perm`) for model-level rules; object-level rules through DRF permission classes or a dedicated library, tested explicitly.
+- DRF: set restrictive `DEFAULT_PERMISSION_CLASSES` (for example `IsAuthenticated`) and opt out per view deliberately.
+- Passwords: keep Django's hashers and validators; never roll custom hashing. Sessions: `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SESSION_COOKIE_HTTPONLY` in production.
+- Token/JWT auth: short access lifetime, rotation and revocation plan; confirm the library and version.
 
-## Focus checks
-- distinguish authentication from authorization.
-- enforce server-side object permissions.
-- test privilege boundaries.
-- avoid insecure direct object access.
+## Anti-patterns
+- Permission checks only in the frontend; `is_staff` as a role system; `csrf_exempt` on session-authenticated views; leaking existence via 403 vs 404 differences where it matters.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing auth backends, user model or permission defaults affects every user: stage it, keep an admin recovery path, get approval.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Tests for anonymous, wrong-user, wrong-tenant and correct-user on each endpoint (expect 401/403/404 as designed); `check --deploy` passes on the auth-related items.

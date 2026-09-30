@@ -1,35 +1,32 @@
 ---
 name: mysql-innodb-memory
-description: "Tune buffer pool and connection-related memory within real host/container limits. Use when work involves mysql innodb memory."
+description: "Tune InnoDB buffer pool, redo, flushing and connection memory in MySQL. Use when memory pressure, low buffer pool hit rate, checkpoint stalls, swapping or OOM kills are observed."
 ---
 
 # MySQL InnoDB Memory
 
-Tune buffer pool and connection-related memory within real host/container limits.
+## Use when
+- High disk reads for a hot dataset, swapping, mysqld killed by OOM, periodic write stalls.
+- Sizing a new server or changing `innodb_*` or per-connection buffers.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- `SELECT @@innodb_buffer_pool_size/1024/1024/1024 AS bp_gb, @@innodb_redo_log_capacity, @@max_connections, @@innodb_flush_log_at_trx_commit, @@innodb_flush_method;` (`innodb_redo_log_capacity` exists from 8.0.30; older uses `innodb_log_file_size` x files).
+- Hit rate: `SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_read%';` compare `reads` (disk) with `read_requests`.
+- `SHOW ENGINE INNODB STATUS\G`: log sequence and checkpoint age, pending writes, buffer pool section.
+- Host: `free -m`, swap use, `dmesg | grep -i oom`.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Dedicated server: buffer pool commonly 50-75% of RAM, leaving room for OS cache, connections and other buffers. Confirm against the working set, not a fixed percentage.
+- Worst-case memory is buffer pool + `max_connections` x (sort/join/read/tmp buffers). Raise per-session buffers per query, never globally.
+- Checkpoint stalls with heavy writes: redo log too small. Bigger redo trades crash-recovery time for smoother flushing.
+- `innodb_flush_log_at_trx_commit=1` and `sync_binlog=1` are the durable settings; relaxing them is a durability decision for the owner, not a tuning trick.
+- `innodb_flush_method=O_DIRECT` on Linux avoids double buffering (confirm for the storage).
 
-## Focus checks
-- separate global/per-thread memory.
-- check buffer-pool hit/read patterns.
-- account for max_connections.
-- avoid swap-driven tuning.
+## Anti-patterns
+- Buffer pool sized to 90% of RAM; huge `sort_buffer_size` or `tmp_table_size` globally; tuning from a status snapshot taken minutes after restart.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+`innodb_buffer_pool_size` is resizable online in chunks but still affects a live server; redo and flush settings need change window and approval. Keep the previous values written down.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Disk reads per second and hit rate before/after under the same load; no swap; p95 write latency and checkpoint age stable; memory headroom at peak connections.

@@ -1,35 +1,32 @@
 ---
 name: react-architecture
-description: "Structure React features, components, state ownership, and boundaries for maintainability. Use when work involves react architecture."
+description: "Organize React applications into features, components, hooks and data layers with clear boundaries. Use when a React codebase has giant components, prop drilling, circular imports or unclear ownership of state and data fetching."
 ---
 
 # React Architecture
 
-Structure React features, components, state ownership, and boundaries for maintainability.
+## Use when
+- Deciding folder structure, splitting components, where to put data fetching and business logic, or scaling a codebase across a team.
 
-## Domain rules
-Follow package.json/lockfile, React/TypeScript/build-tool versions, router/state/data libraries, and existing component/design-system conventions.
+## Diagnose first
+- React and framework versions (`react`, Next.js/Vite/Remix in `package.json`); routing and rendering model (CSR, SSR, RSC).
+- Size and coupling: `find src -name '*.tsx' | xargs wc -l | sort -n | tail`; cycles with `madge --circular src` or `dpdm`.
+- Props depth: components passing more than a handful of props or forwarding untouched props through layers.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Organize by feature (`features/orders/{components,hooks,api,types}`) with a small public `index` per feature; shared UI in a design-system folder; avoid cross-feature deep imports.
+- Presentational components take props and render; containers/hooks own data and side effects. Extract a custom hook when logic is reused or obscures the component.
+- Put server data in a server-state library (see react-server-state), local UI state near where it is used, and only truly global state in a store.
+- Composition over configuration: use `children`, slots and compound components before adding boolean props.
+- Lift state only as far as needed; use context for stable, rarely changing values (theme, auth), not fast-changing state.
+- With frameworks that support it (Next.js App Router), keep data fetching on the server and mark client components (`"use client"`) at the leaves; confirm against the project's version.
+- Follow the project's existing conventions before introducing new ones.
 
-## Focus checks
-- keep state near owner.
-- separate server/client state.
-- avoid mega-components.
-- preserve design-system boundaries.
+## Anti-patterns
+- One 800-line component; `utils` folder dumping ground; context holding everything; copy-pasted components with small variations; barrel files causing cycles and bundle bloat.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Large moves and renames can break imports and code splitting: do them in mechanical steps with tests and get review for shared component API changes.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `tsc --noEmit`, lint, tests pass; no circular imports; features can be read and changed by touching one folder; bundle size not worse.

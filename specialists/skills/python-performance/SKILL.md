@@ -1,35 +1,31 @@
 ---
 name: python-performance
-description: "Profile CPU, memory, allocations, I/O, and algorithmic hotspots before optimizing. Use when work involves python performance."
+description: "Profile and speed up Python code with measurements, algorithmic fixes and the right concurrency model. Use when Python code is slow, memory-hungry or CPU-bound, before any optimization."
 ---
 
 # Python Performance
 
-Profile CPU, memory, allocations, I/O, and algorithmic hotspots before optimizing.
+## Use when
+- High latency or CPU, slow batch jobs, memory growth, or a proposed "optimization" without numbers.
 
-## Domain rules
-Follow the project Python version, pyproject/tooling, typing conventions, and dependency manager. Prefer standard-library solutions when adequate.
+## Diagnose first
+- Time: `python -X importtime -c 'import app'` for startup; `python -m cProfile -o out.prof script.py` then `pstats`/`snakeviz`; `py-spy record -o flame.svg --pid <pid>` for a running process.
+- Micro: `python -m timeit -s "setup" "stmt"`; benchmark with realistic input sizes, several runs.
+- Memory: `tracemalloc` snapshots, `sys.getsizeof` for shallow sizes, `memray` if available.
+- Determine I/O-bound vs CPU-bound: wait time in the profile vs CPU time.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Measure first, fix the top hotspot only, re-measure. Most wins are algorithmic: better complexity, fewer passes, caching (`functools.lru_cache`), batching I/O.
+- Right data structure: `set`/`dict` for membership and lookups, `collections.deque` for queues, generators/iterators for streaming instead of building big lists, `str.join` for concatenation.
+- I/O-bound: async or threads; CPU-bound: `multiprocessing`/`concurrent.futures.ProcessPoolExecutor` or vectorized libraries (NumPy, pandas), or a compiled extension. Note that free-threaded builds are version-specific: confirm before relying on them.
+- Move invariants out of loops, avoid repeated attribute lookups only when profiling shows it matters.
+- Database/network calls dominate most services: fix query count and batching before touching Python code.
 
-## Focus checks
-- measure baseline.
-- profile representative workload.
-- separate CPU/I/O/memory bottlenecks.
-- verify after change.
+## Anti-patterns
+- Optimizing without profiling; micro-optimizing cold code; premature multiprocessing with heavy pickling; caching unbounded results.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Caching and concurrency changes can alter correctness (staleness, races) and memory: keep behavior tests, bound caches, and get approval for production rollout.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Benchmark before/after on the same data with variance noted; profile shows the hotspot reduced; memory peak not worse; outputs identical.

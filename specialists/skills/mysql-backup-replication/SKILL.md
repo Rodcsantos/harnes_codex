@@ -1,35 +1,36 @@
 ---
 name: mysql-backup-replication
-description: "Design backups, tested recovery, replication monitoring, and safe HA procedures. Use when work involves mysql backup and replication."
+description: "Design and verify MySQL backups, point-in-time recovery and replication health. Use when a backup or restore is planned, replica lag or errors appear, or recovery objectives (RPO/RTO) are undefined."
 ---
 
 # MySQL Backup and Replication
 
-Design backups, tested recovery, replication monitoring, and safe HA procedures.
+## Use when
+- Choosing or auditing a backup method, or nobody has restore-tested it.
+- `Seconds_Behind_Source` grows, a replica thread stopped, or GTID sets diverge.
+- A point-in-time recovery or a new replica build is needed.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- `SELECT @@version, @@log_bin, @@binlog_format, @@gtid_mode, @@sync_binlog, @@innodb_flush_log_at_trx_commit, @@binlog_expire_logs_seconds;`
+- On the replica: `SHOW REPLICA STATUS\G` (older: `SHOW SLAVE STATUS`): both IO/SQL threads, lag, `Last_IO_Error`, `Last_SQL_Error`, retrieved vs executed GTID sets.
+- `SELECT * FROM performance_schema.replication_applier_status_by_worker WHERE LAST_ERROR_NUMBER<>0;`
+- Inventory: last good backup time, size, tool, storage location, last restore test date.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Small or portable data: logical dump. Large data or tight RTO: physical (XtraBackup, MySQL Enterprise Backup, clone plugin); restore is far faster.
+- InnoDB-only consistent dump: `mysqldump --single-transaction --routines --triggers --events --source-data=2` (older flag `--master-data=2`). MyISAM tables need locks.
+- PITR = full backup + binlogs replayed with `mysqlbinlog --start-position/--stop-datetime`. It only works if binlog is on and retained longer than the backup interval.
+- Prefer GTID with auto-positioning and row-based binlog; they make failover and re-pointing predictable.
+- Lag with a single applier: enable multithreaded apply (`replica_parallel_workers`, `replica_parallel_type=LOGICAL_CLOCK`; pre-8.0.26 names use `slave_`). Other causes: huge transactions, tables without primary key on a row-based replica.
 
-## Focus checks
-- define RPO/RTO.
-- test restores.
-- monitor replica lag/errors.
-- treat replication as availability not backup.
+## Anti-patterns
+- Backups on the same host or disk as the data; backups never restored.
+- Skipping errors with `sql_replica_skip_counter` to "get green": it hides divergence.
+- Reading from a replica as if it had zero lag.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Ask before: `STOP/RESET REPLICA`, `CHANGE REPLICATION SOURCE`, skipping or injecting empty GTIDs, `PURGE BINARY LOGS`, any restore over a live database. Restore into a scratch instance first; keep the old data until the new one is verified.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Restore to scratch, compare `CHECKSUM TABLE` or pt-table-checksum on critical tables, record measured RTO.
+- Replica: both threads `Yes`, lag trending to 0, executed GTID set catches up to the source.
