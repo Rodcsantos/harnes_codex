@@ -1,6 +1,6 @@
 name = "security_reviewer"
 description = "Security reviewer. Audits a diff or area for authn/authz gaps, injection, secrets, unsafe deserialization, SSRF and dependency risk. Read-only."
-model = "gpt-5.6"
+model = "gpt-6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
