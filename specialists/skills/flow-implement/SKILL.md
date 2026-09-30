@@ -1,16 +1,17 @@
 ---
 name: flow-implement
-description: "Execute an approved .harness/plan.md step by step with tests first and minimal diffs. Use after flow-plan or when a plan file already exists."
+description: "Execute an existing .harness/plan.md with minimal diffs. Use after flow-plan or when a plan file already exists."
 ---
 
 # Flow: Implement
 
-Read `.harness/plan.md` first; do not re-explore what it already answers.
+Read `.harness/plan.md` once and execute from it; do not re-explore answered questions.
 
-For each step, in order:
-1. `test_engineer` writes the failing test (bugs) or the behavior test (features) and shows the run.
-2. The owning specialist (`python_expert`, `django_expert`, `react_expert`, DBA, ...) makes the smallest change that turns it green.
-3. Post-edit hooks report lint/format/syntax errors; fix them before moving on.
-4. Tick the step in `.harness/plan.md`.
+For each step:
+1. Use the main agent or the one owning specialist. Do not create a separate specialist when the main context already has the necessary domain knowledge.
+2. For a bug, establish a failing regression test when practical. A separate `test_engineer` is optional and is useful only when isolated test design materially improves confidence or can run independently.
+3. Make the smallest change that satisfies the step and keep related edits together.
+4. Let post-edit hooks catch cheap syntax/lint errors; fix them before broadening verification.
+5. Tick the step in `.harness/plan.md`.
 
-Rules: never run two agents on overlapping files; keep each step commit-sized; if reality contradicts the plan, stop and update the plan instead of improvising; do not broaden scope.
+Rules: never run two agents on overlapping files; do not broaden scope; if evidence contradicts the plan, update only the affected plan item instead of restarting discovery.
