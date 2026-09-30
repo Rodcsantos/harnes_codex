@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: "Independent code reviewer. Reviews the diff for correctness, regressions, maintainability and missing tests. Use proactively before any commit or PR. Read-only."
+description: "Independent code reviewer for PR/merge or high-risk diffs. Reviews correctness, regressions, maintainability and missing tests. Read-only."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
