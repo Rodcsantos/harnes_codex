@@ -1,35 +1,32 @@
 ---
 name: shared-api-design
-description: "Design stable REST/HTTP contracts, validation, errors, pagination, idempotency, and versioning. Use when work involves api design."
+description: "Design or review API contracts for consistency, compatibility, errors, pagination and idempotency across REST or RPC styles. Use when defining new endpoints, changing an existing contract, or reviewing an API for breaking changes."
 ---
 
 # API Design
 
-Design stable REST/HTTP contracts, validation, errors, pagination, idempotency, and versioning.
+## Use when
+- New API surface, versioning question, client breakage after a change, inconsistent errors or pagination, retry/duplicate problems.
 
-## Domain rules
-Apply this skill across stacks while preserving the repository architecture and user-requested scope.
+## Diagnose first
+- Find the current contract: OpenAPI/schema files, route definitions, client SDKs, and real consumers (who calls this and how).
+- Compare with actual behavior using recorded requests or `curl -i`: status codes, headers, error bodies, nullability.
+- Check for existing conventions (naming, envelopes, pagination style, error format) and follow them.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Resources as nouns, verbs from HTTP semantics; correct status codes; one consistent error shape with a stable machine-readable code.
+- Backward compatible by default: adding optional fields/endpoints is safe; removing, renaming, tightening validation or changing types/defaults is breaking.
+- Breaking change: version it (path or header), deprecate with a date and telemetry on old usage, then remove.
+- Lists: bounded page size, cursor pagination for large or changing data, explicit sort/filter allowlists.
+- Writes that clients may retry: idempotency keys or naturally idempotent methods; define behavior for duplicates.
+- Auth, rate limits and quotas documented per endpoint; timeouts and retry guidance for clients.
+- Contract first: update the schema and generate/validate against it in tests.
 
-## Focus checks
-- use precise status semantics.
-- define error schema.
-- bound pagination.
-- document idempotency/concurrency.
+## Anti-patterns
+- Leaking internal ids or database shapes; boolean flags that multiply states; 200 for errors; unbounded responses; renaming fields "for consistency" without a compatibility path.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Contract changes on published APIs need owner approval and consumer communication; never remove fields to test impact in production.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Contract tests or schema validation pass; consumer-driven tests or sample clients still work; diff of the schema shows only intended additive changes.

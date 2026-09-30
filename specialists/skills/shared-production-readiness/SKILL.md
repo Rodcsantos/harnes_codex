@@ -1,35 +1,32 @@
 ---
 name: shared-production-readiness
-description: "Check configuration, secrets, migrations, observability, rollback, capacity, and failure behavior before release. Use when work involves production readiness."
+description: "Check that a change or service is ready for production: observability, failure modes, rollout, rollback and capacity. Use when preparing a release, launching a feature, or assessing an unfamiliar service before it takes traffic."
 ---
 
 # Production Readiness
 
-Check configuration, secrets, migrations, observability, rollback, capacity, and failure behavior before release.
+## Use when
+- Pre-launch review, post-incident hardening, first deployment of a service, or a risky change (schema, dependency, infra).
 
-## Domain rules
-Apply this skill across stacks while preserving the repository architecture and user-requested scope.
+## Diagnose first
+- Read the deploy path: build, config/secret sources, migrations order, health checks, how a bad release is reverted.
+- Existing telemetry: logs with request ids, metrics (rate, errors, latency, saturation), traces, dashboards and alerts that would fire.
+- Dependencies and their failure behavior: timeouts, retries, circuit breaking, what happens when each is down or slow.
+- Data: backups exist and restore was tested; migrations are backward compatible with the running version.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Every external call has a timeout and bounded retries with backoff and jitter; retries only for idempotent operations.
+- Rollout is reversible: feature flag or canary, expand/contract migrations, previous artifact retained. If a step cannot be undone, it needs explicit sign-off.
+- Alerts on symptoms users feel (error rate, latency, saturation, queue age) with an owner and a runbook link; no alert without an action.
+- Capacity: know the limit that breaks first (connections, memory, queue depth) and the graceful failure (shed load, degrade) beyond it.
+- Config and secrets from the environment, validated at startup; safe defaults; no debug flags on.
+- Security basics: authn/authz on new endpoints, least-privilege credentials, dependency audit.
 
-## Focus checks
-- verify rollback.
-- check migrations/backward compatibility.
-- define health/readiness.
-- ensure actionable telemetry.
+## Anti-patterns
+- "We'll add monitoring after launch"; migrations and code that must deploy atomically; unbounded queues and caches; health checks that always return OK; untested rollback.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Production changes, flag flips and rollbacks need the owner's approval and a communicated window; do not test failure modes on production without explicit agreement.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Checklist with evidence per item (link, command output, test run); a staging or canary run shows the dashboards moving as expected; rollback exercised once.

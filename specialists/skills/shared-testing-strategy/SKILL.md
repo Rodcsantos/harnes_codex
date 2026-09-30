@@ -1,35 +1,33 @@
 ---
 name: shared-testing-strategy
-description: "Choose unit, integration, contract, database, and end-to-end coverage around risk and behavior. Use when work involves testing strategy."
+description: "Choose the right mix of unit, integration and end-to-end tests, test data and CI gates for a change or system. Use when planning tests for a feature, reducing flakiness or slowness, or deciding what not to test."
 ---
 
 # Testing Strategy
 
-Choose unit, integration, contract, database, and end-to-end coverage around risk and behavior.
+## Use when
+- Deciding test scope for new work, an untested legacy area, a flaky or slow suite, or unclear confidence before release.
 
-## Domain rules
-Apply this skill across stacks while preserving the repository architecture and user-requested scope.
+## Diagnose first
+- Inventory the current suites: counts by level, runtime (`--durations`), flake rate from CI history, coverage of the changed code.
+- Identify the risk: what breaks users or money if wrong? Which boundaries (DB, network, time, concurrency) does the change cross?
+- Check for existing test utilities, fixtures and conventions and reuse them.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Many fast unit tests for logic, fewer integration tests for real boundaries (database, queue, HTTP), a small number of end-to-end tests for critical journeys.
+- Test at the lowest level that can catch the bug; add a higher-level test only for wiring or user-visible flow.
+- Bug fixes start with a failing regression test.
+- Prefer real dependencies via containers or transactional databases over mocks for persistence; mock only what you do not control.
+- Deterministic tests: injected clock, seeded random, isolated data, no sleeps, no order dependence, independent parallel runs.
+- Cover boundaries and failure modes (empty, max, invalid, timeout, duplicate, concurrent) more than happy-path variations.
+- Quarantine flaky tests with a ticket and owner; fix or delete, never ignore.
+- CI gates: fast checks on every change, slower suites on merge or schedule; coverage on changed lines as a signal.
 
-## Focus checks
-- test at cheapest reliable layer.
-- cover critical boundaries.
-- avoid duplicate brittle tests.
-- include negative/failure cases.
+## Anti-patterns
+- Testing implementation details; ice-cream cone of slow UI tests; shared mutable test data; asserting on logs or ordering that is not part of the contract; chasing a coverage number.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Never run tests against production data or third-party live accounts; use dedicated test resources and guard configuration.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- The risky behaviors each have at least one test that fails when the behavior breaks (mutation check by temporarily breaking the code); suite time and flake rate are stable or improved.

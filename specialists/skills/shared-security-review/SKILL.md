@@ -1,35 +1,33 @@
 ---
 name: shared-security-review
-description: "Review trust boundaries using practical OWASP-style threat paths without generic checklist noise. Use when work involves application security review."
+description: "Perform a threat-focused security review of code, design or configuration: trust boundaries, authz, input handling, secrets and dependencies. Use when reviewing a feature for security, auditing an area, or triaging a vulnerability report."
 ---
 
 # Application Security Review
 
-Review trust boundaries using practical OWASP-style threat paths without generic checklist noise.
+## Use when
+- New auth or data-access paths, handling of untrusted input, file/URL/command sinks, secrets handling, third-party integrations, or a reported vulnerability.
 
-## Domain rules
-Apply this skill across stacks while preserving the repository architecture and user-requested scope.
+## Diagnose first
+- Map assets, actors and trust boundaries: what data matters, who can call what, where untrusted input enters.
+- Trace each input to its sinks (query, command, template, filesystem, HTTP fetch, deserializer, log).
+- Tooling as a starting point, not a verdict: dependency audit (`npm audit`, `pip-audit`, `composer audit`), secret scanning (gitleaks), SAST (Semgrep, Bandit, language linters).
+- Review authentication, session/token handling, and authorization checks at the object level for every entry point.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Authentication is not authorization: verify ownership/tenant/role on each object and function; look for IDOR and mass assignment.
+- Injection classes: SQL/NoSQL, command, template, header, path traversal, SSRF, XXE, unsafe deserialization: parameterize, allowlist, avoid the sink.
+- Output encoding by context; CSRF protections for cookie-based auth; CORS and cookie flags set deliberately.
+- Secrets never in code, logs, URLs or client bundles; rotate on exposure; least-privilege credentials.
+- Report only findings with a plausible exploit path here: severity, location, steps or conditions, impact, minimal fix; mark theoretical items as such.
+- Consider abuse cases: rate limits, enumeration, replay, resource exhaustion.
+- Supply chain: new dependencies, install scripts, pinned versions, provenance.
 
-## Focus checks
-- identify assets/actors.
-- trace untrusted inputs.
-- verify authz server-side.
-- prioritize exploitable paths.
+## Anti-patterns
+- Reporting scanner output unverified; "add validation" without naming the sink; security by obscurity; treating client-side checks as controls.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Test only in authorized environments; never exfiltrate real data or run exploits on production; treat found secrets as compromised and escalate to the owner.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- A test or proof of concept in a safe environment demonstrates each finding and shows it fixed; scanners rerun clean or triaged; remaining risk stated.
