@@ -1,35 +1,33 @@
 ---
 name: react-state
-description: "Choose and debug local, Context, Zustand, Redux or project-existing state patterns. Use when work involves react state management."
+description: "Choose and structure React state: local, lifted, reducer, context or external store, and avoid derived and duplicated state. Use when state is out of sync, prop drilling grows, re-renders spread widely, or a global store is proposed."
 ---
 
 # React State Management
 
-Choose and debug local, Context, Zustand, Redux or project-existing state patterns.
+## Use when
+- Bugs from duplicated state, complex update logic, deciding between useState/useReducer/context/store, or performance issues from broad state changes.
 
-## Domain rules
-Follow package.json/lockfile, React/TypeScript/build-tool versions, router/state/data libraries, and existing component/design-system conventions.
+## Diagnose first
+- Inventory state: for each piece, who reads it, who writes it, and whether it can be computed from other state or props.
+- React DevTools: which components re-render when it changes; existing store libraries and patterns in the repo (Redux Toolkit, Zustand, Jotai, Context).
+- Search for `useEffect` that only sets state from other state (a sign of derived state).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Keep state as local as possible; lift to the nearest common parent only when siblings need it.
+- Do not store what you can compute: derive from the minimal source of truth during render.
+- One source of truth: avoid mirroring props in state; reset with a `key` when identity changes.
+- Related fields that change together or complex transitions: `useReducer` with typed actions; store ids and normalized data rather than nested copies.
+- Context for low-frequency shared values (theme, user, config); for frequent updates use a store with selectors (Zustand, Redux Toolkit, Jotai) so consumers subscribe to slices.
+- Remote data belongs in a server-state library (react-server-state); URL state (filters, pagination) in the URL; form state in the form library.
+- State updates are snapshots: use functional updates for values based on previous state; never mutate.
+- Model impossible states away (discriminated unions such as `status: 'idle'|'loading'|'error'`) instead of parallel booleans.
 
-## Focus checks
-- use existing library first.
-- minimize global state.
-- select narrowly to reduce rerenders.
-- avoid duplicated sources of truth.
+## Anti-patterns
+- Global store for everything; contexts with large frequently changing objects; syncing two states with effects; storing derived arrays; boolean flag explosion.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing the shape or persistence of global state (persisted stores, URLs) can break saved user data and deep links: version or migrate.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Tests exercise reducers/selectors and key flows; DevTools shows only expected components re-rendering; no effects exist merely to sync state.

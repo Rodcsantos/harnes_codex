@@ -1,35 +1,33 @@
 ---
 name: react-forms-validation
-description: "Build typed, accessible forms with client/server validation and predictable submission state. Use when work involves react forms validation."
+description: "Implement React forms with controlled or uncontrolled inputs, schema validation, async submit and accessible errors. Use when building or fixing forms, validation logic, multi-step flows, or slow re-rendering forms."
 ---
 
 # React Forms Validation
 
-Build typed, accessible forms with client/server validation and predictable submission state.
+## Use when
+- New forms, validation rules shared with the API, double submits, lost input, or large forms that lag.
 
-## Domain rules
-Follow package.json/lockfile, React/TypeScript/build-tool versions, router/state/data libraries, and existing component/design-system conventions.
+## Diagnose first
+- Which form library is in use (React Hook Form, Formik, TanStack Form, native/`useActionState`) and validation library (Zod, Yup, Valibot); reuse them.
+- Where validation runs: client only, server only, or both; API error format for field errors.
+- Profile re-renders with React DevTools if typing feels slow.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Validate on the server always; client validation is for feedback. Share one schema between client and server where the stack allows.
+- Prefer uncontrolled inputs with a form library (React Hook Form) for large forms; controlled inputs only when the UI must react to each keystroke.
+- Show errors after blur/submit rather than on first keystroke; keep the user's input on failure; move focus to the first invalid field on submit.
+- Prevent double submit: disable the button while pending and make the endpoint idempotent; handle network failure with a retry path.
+- Map server field errors back to fields (`setError`); show a general error for the rest.
+- Accessible: real `label`s, `aria-invalid`, `aria-describedby` for messages, `required` semantics, correct `type`/`autocomplete`/`inputMode`.
+- Convert types explicitly (numbers, dates) at the schema boundary; trim and normalize consistently.
+- Multi-step: keep state in one place, validate per step, persist drafts if data loss hurts.
 
-## Focus checks
-- server remains authority.
-- map field/global errors.
-- prevent duplicate submits.
-- preserve focus/accessibility.
+## Anti-patterns
+- Client-only validation trusted by the backend; validating on every keystroke with heavy schemas; storing form state in global stores; using array index as key for dynamic fields; clearing the form on error.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Never log form values containing passwords or personal data; sensitive fields need proper `autocomplete` and no persistence to local storage.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Tests: invalid input shows accessible errors, valid input submits once, server errors map to fields, keyboard-only submission works; typing stays responsive on large forms.

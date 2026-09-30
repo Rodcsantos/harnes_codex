@@ -1,35 +1,34 @@
 ---
 name: react-typescript
-description: "Model props, APIs, events, generics, and discriminated states precisely in React. Use when work involves react typescript."
+description: "Type React components, props, hooks, events and generics with TypeScript without any-leaks. Use when adding types to components, fixing compiler errors, typing polymorphic or generic components, or tightening strictness."
 ---
 
 # React TypeScript
 
-Model props, APIs, events, generics, and discriminated states precisely in React.
+## Use when
+- Type errors in props/events/refs, `any` spreading through APIs, typing context and reducers, or migrating JS components.
 
-## Domain rules
-Follow package.json/lockfile, React/TypeScript/build-tool versions, router/state/data libraries, and existing component/design-system conventions.
+## Diagnose first
+- `tsc --noEmit` (project's `tsconfig.json`), `strict` and `noUncheckedIndexedAccess` flags, TypeScript and `@types/react` versions.
+- Count leaks: `grep -rn ": any\|as any\|@ts-ignore\|@ts-expect-error" src | wc -l`.
+- Read the exact error and the inferred type (hover in the editor or `type X = typeof y` tricks) before adding annotations.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Type props with an interface or type alias; do not use `React.FC` unless the codebase does; `children: React.ReactNode` when needed. Prefer inference for locals.
+- Events: `React.ChangeEvent<HTMLInputElement>`, `React.MouseEvent<HTMLButtonElement>`; wrap native props with `React.ComponentPropsWithoutRef<'button'>` to extend elements.
+- Discriminated unions for variants and states; exhaustive `switch` with a `never` check.
+- Generics for reusable components (`<T,>(props: ListProps<T>)`) constraining with `extends`; avoid over-generic APIs.
+- Context: provide a non-null hook (`useX` throws if missing) instead of `undefined!`; reducers with typed action unions.
+- Refs: `useRef<HTMLDivElement>(null)`; forward refs typed with `forwardRef` (or `ref` as prop in newer React: confirm version).
+- Validate external data at the boundary (Zod) and infer types from schemas (`z.infer`) rather than asserting with `as`.
+- `unknown` over `any`; narrow with type guards; `satisfies` to check shape without widening.
+- Keep `@ts-expect-error` (with reason) over `@ts-ignore`, so stale suppressions fail.
 
-## Focus checks
-- avoid Any.
-- narrow unknown safely.
-- use discriminated unions for UI states.
-- keep API DTO/domain mapping explicit.
+## Anti-patterns
+- `as any` to pass the compiler; casting API responses; optional props for everything; duplicating types manually from the backend instead of generating or sharing them.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Tightening compiler flags project-wide can surface hundreds of errors: roll out per directory and agree with the team before merging.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `tsc --noEmit` and lint pass; no new `any` or suppressions; runtime tests still pass; type tests (`expectTypeOf`/`tsd`) cover tricky generic APIs.

@@ -1,35 +1,33 @@
 ---
 name: react-accessibility
-description: "Audit semantic HTML, keyboard flow, focus, ARIA, labels, and dynamic announcements. Use when work involves react accessibility."
+description: "Build and audit accessible React UIs: semantics, keyboard, focus, ARIA and screen reader behavior. Use when adding interactive components, forms, dialogs or menus, or when an accessibility audit or bug is reported."
 ---
 
 # React Accessibility
 
-Audit semantic HTML, keyboard flow, focus, ARIA, labels, and dynamic announcements.
+## Use when
+- Custom buttons/menus/modals/tabs, forms with errors, dynamic content updates, or failing axe/Lighthouse checks.
 
-## Domain rules
-Follow package.json/lockfile, React/TypeScript/build-tool versions, router/state/data libraries, and existing component/design-system conventions.
+## Diagnose first
+- Automated: `eslint-plugin-jsx-a11y`, `jest-axe`/`@axe-core/playwright` in tests, browser axe or Lighthouse. They catch only part of the problems.
+- Manual: navigate the flow with keyboard only (Tab, Shift+Tab, Enter, Space, Esc, arrows) and check visible focus order.
+- Inspect the accessibility tree in browser devtools; try a screen reader (VoiceOver/NVDA) on the critical path.
+- Check contrast, zoom to 200%, and reduced motion.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Use native elements first: `button`, `a href`, `input`, `label`, `select`, `dialog`, headings and landmarks. ARIA only fills gaps native HTML cannot; wrong ARIA is worse than none.
+- Every control has an accessible name (`label`/`htmlFor`, `aria-label`, `aria-labelledby`); icon-only buttons need one.
+- Custom widgets follow the WAI-ARIA Authoring Practices keyboard patterns and manage roles/states (`aria-expanded`, `aria-selected`).
+- Modals: focus moves in, is trapped, `Esc` closes, focus returns to the trigger, background inert. Prefer a proven library (Radix, React Aria, Headless UI) over hand-rolled.
+- Errors: associate messages with fields (`aria-describedby`, `aria-invalid`), announce dynamic updates with `aria-live` regions sparingly, move focus to the first error on submit.
+- Never rely on color alone; keep focus outlines visible; honor `prefers-reduced-motion`.
+- Route changes in SPAs: update the title and move focus to the new content heading.
 
-## Focus checks
-- prefer native semantics.
-- test keyboard-only flow.
-- manage modal/dialog focus.
-- do not use ARIA to replace HTML semantics.
+## Anti-patterns
+- `div onClick` as button; `tabIndex` > 0; removing outlines; placeholder as label; `aria-hidden` on focusable content; autoplay without control.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Replacing shared components changes behavior everywhere: check usages and get review for design-system changes.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- axe tests pass in CI, keyboard-only walkthrough completes the task, screen reader announces name/role/state correctly, contrast ratios meet WCAG AA (confirm the target level).
