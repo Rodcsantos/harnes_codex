@@ -11,7 +11,7 @@ check() {
   fi
 }
 
-for c in codex claude python3 git rtk atlas sigmap serena mcp2cli mcpq headroom tokview; do check "$c"; done
+for c in codex claude python3 git rtk ast-grep atlas sigmap serena mcp2cli mcpq headroom tokview; do check "$c"; done
 
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 python3 - "$CODEX_HOME" <<'PY'
