@@ -1,35 +1,31 @@
 ---
 name: python-typing
-description: "Apply precise Python typing and static-analysis-friendly interfaces. Use when work involves python typing."
+description: "Add and fix Python type hints with mypy or pyright, generics, protocols and gradual adoption. Use when type checker errors appear, public APIs need contracts, or typing an untyped codebase incrementally."
 ---
 
 # Python Typing
 
-Apply precise Python typing and static-analysis-friendly interfaces.
+## Use when
+- `mypy`/`pyright` failures, `Any` leaking through APIs, TypedDict/dataclass/Pydantic modeling questions, or adding typing to legacy code.
 
-## Domain rules
-Follow the project Python version, pyproject/tooling, typing conventions, and dependency manager. Prefer standard-library solutions when adequate.
+## Diagnose first
+- `python -V` (syntax like `X | None` and `list[int]` need 3.10/3.9+; `typing_extensions` otherwise); the repo's checker and config (`[tool.mypy]`, `pyrightconfig.json`).
+- Run the checker on the narrow path first: `mypy path/to/module.py` or `pyright path/`; `--show-error-codes` to see codes.
+- Count `Any`/`# type: ignore`: `grep -rn "type: ignore\|Any" --include=*.py | wc -l`.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Type public function signatures and data models first; let inference handle locals. Adopt gradually: per-module strictness overrides rather than one big-bang `--strict`.
+- Prefer precise types: `Sequence`/`Mapping` for read-only params, `Protocol` for structural interfaces, `TypedDict`/`dataclass`/Pydantic for structured data, `Literal`/`Enum` for closed sets, `NewType` for ids.
+- Narrow `Optional` with checks (`if x is None`), not with `assert` in production paths or casts.
+- `cast` and `# type: ignore[code]` only with a comment saying why; keep them rare and specific.
+- Generics: `TypeVar`/PEP 695 syntax (3.12+, confirm target version); `ParamSpec` for decorators that preserve signatures.
+- Avoid `Any` at boundaries; use `object` or `unknown`-style narrowing after validation.
 
-## Focus checks
-- prefer concrete types at boundaries.
-- use Protocol for structural contracts when useful.
-- avoid Any leakage.
-- validate generic variance/None handling.
+## Anti-patterns
+- Blanket `# type: ignore`; `Any` to silence errors; annotating with `dict` when a `TypedDict` exists; runtime-changing code only to satisfy the checker without understanding the error.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing public type contracts in a library is an API change; check downstream users and versions. Do not change runtime behavior under the banner of "typing".
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Checker passes on the touched scope with no new ignores; runtime tests still pass; strictness for the module increased, not decreased.

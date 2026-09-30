@@ -1,35 +1,32 @@
 ---
 name: python-packaging
-description: "Manage pyproject, uv/pip, dependency groups, builds, and reproducible environments. Use when work involves python packaging."
+description: "Manage Python packaging, dependencies, virtual environments and reproducible builds. Use when dependency conflicts, import errors after install, publishing a library, or unreproducible environments occur."
 ---
 
 # Python Packaging
 
-Manage pyproject, uv/pip, dependency groups, builds, and reproducible environments.
+## Use when
+- `ModuleNotFoundError` after install, version conflicts, choosing pyproject/lock tooling, building wheels, or CI installs differing from local.
 
-## Domain rules
-Follow the project Python version, pyproject/tooling, typing conventions, and dependency manager. Prefer standard-library solutions when adequate.
+## Diagnose first
+- `which python; python -V; python -m pip --version; python -c 'import sys; print(sys.path)'`: is the intended virtualenv active?
+- `python -m pip check`, `python -m pip list --outdated`, `pip show <pkg>`; for locks read `uv.lock`/`poetry.lock`/`requirements*.txt`.
+- Read `pyproject.toml`: `[project]`, `dependencies`, `requires-python`, build backend, tool sections.
+- Which package manager the repo uses; do not introduce a second one.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- One environment per project (`python -m venv .venv` or the repo's tool such as uv/poetry); never install into system Python.
+- Applications pin exact versions via a lock file with hashes when possible; libraries declare compatible ranges (lower bound, avoid tight upper caps without a reason).
+- Declare all runtime imports as dependencies; put dev/test tools in optional groups.
+- Use `src/` layout and `pyproject.toml` (PEP 517/621); build with `python -m build`; install locally with `pip install -e .`.
+- Reproducibility: same Python minor version in CI and runtime, lock file committed, `pip install --require-hashes` or the tool's frozen install in CI.
+- Resolve conflicts by finding which package needs the incompatible range (`pipdeptree -r -p pkg`) before pinning around it.
 
-## Focus checks
-- respect existing package manager.
-- pin/lock appropriately.
-- separate runtime/dev dependencies.
-- verify clean install.
+## Anti-patterns
+- `sudo pip install`; unpinned production deploys; copying `site-packages`; `sys.path` hacks; mixing pip and conda in one env without care; `requirements.txt` as the only source of truth alongside a divergent `pyproject.toml`.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Upgrading dependencies (especially major versions or security-sensitive packages) and publishing to PyPI need approval; publishing is irreversible per version.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Fresh venv install from the lock works and tests pass; `pip check` clean; wheel builds and installs in a clean environment; CI matrix green.

@@ -1,35 +1,32 @@
 ---
 name: python-architecture
-description: "Design or refactor Python module boundaries without unnecessary abstraction. Use when work involves python architecture."
+description: "Structure Python code into modules with clear boundaries, dependency direction and testable seams. Use when a Python codebase has tangled imports, god modules, hidden globals or logic that is hard to test."
 ---
 
 # Python Architecture
 
-Design or refactor Python module boundaries without unnecessary abstraction.
+## Use when
+- Deciding module layout, extracting services, breaking import cycles, or introducing dependency injection without over-engineering.
 
-## Domain rules
-Follow the project Python version, pyproject/tooling, typing conventions, and dependency manager. Prefer standard-library solutions when adequate.
+## Diagnose first
+- Layout and size: `find . -name '*.py' -not -path './.venv/*' | xargs wc -l | sort -n | tail`.
+- Cycles: `python -X importtime -c 'import pkg' 2>&1 | tail` for slow/circular imports; `pydeps`/`import-linter` if present.
+- Global state: `grep -rn "^[A-Za-z_]* = \|global " --include=*.py src/ | head`.
+- Python version and packaging (`pyproject.toml`), existing conventions.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Dependencies point inward: domain logic has no imports of frameworks, ORMs or I/O clients; adapters (DB, HTTP, queue) depend on the domain, not the reverse.
+- Pass collaborators as arguments (functions, small classes, `Protocol`s) instead of importing singletons; construct them at the edge (`main`, app factory).
+- Prefer functions and plain dataclasses; add classes when state and behavior belong together. Avoid inheritance for reuse; use composition.
+- One reason to change per module; break cycles by moving shared types down or inverting with a `Protocol`.
+- Keep I/O at the boundaries so core logic is pure and unit-testable.
+- Follow the repo's existing structure before proposing a new one.
 
-## Focus checks
-- map import/dependency direction.
-- keep domain logic testable.
-- avoid circular imports.
-- preserve public APIs.
+## Anti-patterns
+- `utils.py` dumping ground; import-time side effects (connections, config reads); module-level mutable state; deep class hierarchies; premature abstractions for one implementation.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Large moves and renames change public import paths: keep re-exports or a deprecation period and get approval for public API changes.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Tests pass before and after; import cycle check clean; core module imports without I/O; a new adapter can be swapped in a test without patching internals.
