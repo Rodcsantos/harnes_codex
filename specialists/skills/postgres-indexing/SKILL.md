@@ -1,35 +1,32 @@
 ---
 name: postgres-indexing
-description: "Choose B-tree, partial, expression, GIN/GiST/BRIN and INCLUDE indexes from real queries. Use when work involves postgresql indexing."
+description: "Choose PostgreSQL index types and definitions (btree, GIN, GiST, BRIN, partial, covering) and create them safely. Use when queries need index support, an index is unused or bloated, or index creation on a big table is planned."
 ---
 
 # PostgreSQL Indexing
 
-Choose B-tree, partial, expression, GIN/GiST/BRIN and INCLUDE indexes from real queries.
+## Use when
+- Slow filters, joins, ordering, JSONB/array/full-text search, or time-series scans; reviewing unused or duplicate indexes.
 
-## Domain rules
-Assume production data safety matters. Use actual plans/statistics/waits before tuning and never execute destructive or disruptive operations without explicit approval.
+## Diagnose first
+- `SELECT indexrelid::regclass, idx_scan, pg_size_pretty(pg_relation_size(indexrelid)) FROM pg_stat_user_indexes WHERE relid='t'::regclass ORDER BY idx_scan;` (counters reset with stats resets).
+- `SELECT indexdef FROM pg_indexes WHERE tablename='t';` and check duplicates by column list.
+- `EXPLAIN (ANALYZE, BUFFERS)` of the target query before creating anything.
+- Bloat suspicion: compare index size to table size and check `pgstattuple` if available.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Default btree: equality then range column order; leftmost-prefix applies.
+- JSONB containment, arrays, full-text: GIN. Geometric/range/nearest-neighbour: GiST. Huge append-only, naturally ordered data: BRIN.
+- Partial index (`WHERE active`) when queries always filter the same subset; expression index when the query uses the same expression.
+- Covering: `INCLUDE (cols)` (PG 11+) for index-only scans; needs a recently vacuumed visibility map.
+- Foreign key columns usually need an index on the referencing side for deletes and joins.
+- `text_pattern_ops` or a trigram index (`pg_trgm`) for `LIKE 'x%'` under non-C collations or `LIKE '%x%'`.
 
-## Focus checks
-- match operator/query pattern.
-- consider partial predicates.
-- avoid duplicate indexes.
-- use concurrent creation for live systems when needed.
+## Anti-patterns
+- Indexing every column; duplicate `(a)` and `(a,b)`; indexes on low-selectivity booleans; unused indexes kept "just in case".
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Use `CREATE INDEX CONCURRENTLY` on live tables (cannot run in a transaction; a failed run leaves an INVALID index to drop and retry). Plain `CREATE INDEX` blocks writes. `DROP INDEX CONCURRENTLY` likewise. Needs approval for large tables; check disk space first.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Plan uses the index (`Index Scan`/`Index Only Scan`/`Bitmap`), timing and buffers improved, `pg_index.indisvalid` is true, write latency unchanged.

@@ -1,35 +1,32 @@
 ---
 name: postgres-explain-analyze
-description: "Read EXPLAIN (ANALYZE, BUFFERS) safely and interpret timing, rows, loops, and I/O. Use when work involves postgresql explain analyze."
+description: "Read PostgreSQL execution plans with EXPLAIN (ANALYZE, BUFFERS) and find the real bottleneck. Use when a query is slow, a plan changed after deploy or data growth, or estimates and actual rows disagree."
 ---
 
 # PostgreSQL EXPLAIN ANALYZE
 
-Read EXPLAIN (ANALYZE, BUFFERS) safely and interpret timing, rows, loops, and I/O.
+## Use when
+- Sequential scan where an index was expected, nested loop explosions, sorts spilling to disk, or plan flips between environments.
 
-## Domain rules
-Assume production data safety matters. Use actual plans/statistics/waits before tuning and never execute destructive or disruptive operations without explicit approval.
+## Diagnose first
+- `EXPLAIN (ANALYZE, BUFFERS, VERBOSE, SETTINGS) <query>;` ANALYZE executes the statement: for INSERT/UPDATE/DELETE wrap in `BEGIN; ... ROLLBACK;` or avoid on production.
+- Read bottom-up; compare `rows=` (estimate) with `actual ... rows=` and `loops`. Multiply per-loop time by loops.
+- Buffers: `shared hit` vs `read` (cache), `temp read/written` (spill), `Sort Method: external merge Disk`.
+- `SELECT * FROM pg_stats WHERE tablename='t' AND attname='c';` and `SELECT relname, n_live_tup, last_analyze, last_autoanalyze FROM pg_stat_user_tables;`
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Estimate off by 10x or more: stale statistics (`ANALYZE`), correlated columns (`CREATE STATISTICS`), or expression the planner cannot estimate.
+- Seq scan is fine when the query needs a large fraction of the table; force nothing until you know the selectivity.
+- Sort or hash spill: raise `work_mem` for that session or role, not globally; or add an index that provides order.
+- Nested loop with large inner loops: missing index on the join key or bad row estimate.
+- Generic vs custom plans in prepared statements can differ; check `plan_cache_mode` when only the app is slow.
+- Do not tune with `enable_*` flags in production; use them only to compare plans in a session.
 
-## Focus checks
-- avoid ANALYZE on unsafe writes.
-- compare estimate vs actual.
-- multiply rows by loops mentally.
-- look for spills and buffer pressure.
+## Anti-patterns
+- Reading only the total time; trusting a plan from a tiny dev dataset; changing indexes without re-running ANALYZE-based comparison.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+`SET` changes stay session-local; never `ALTER SYSTEM` for a single query. Do not run ANALYZE on destructive statements outside a rolled back transaction.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Same query, same parameters, before/after plans saved; actual time and buffers dropped; estimates within a small factor of actual rows.

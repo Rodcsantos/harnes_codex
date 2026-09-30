@@ -1,35 +1,32 @@
 ---
 name: postgres-vacuum-statistics
-description: "Manage autovacuum, analyze, bloat signals, freeze risk, and planner statistics. Use when work involves postgresql vacuum and statistics."
+description: "Manage PostgreSQL autovacuum, bloat, transaction ID wraparound risk and planner statistics. Use when tables bloat, queries slow as data churns, autovacuum lags, or age(datfrozenxid) grows."
 ---
 
 # PostgreSQL Vacuum and Statistics
 
-Manage autovacuum, analyze, bloat signals, freeze risk, and planner statistics.
+## Use when
+- Dead tuples pile up, index-only scans stop working, disk grows without data growth, wraparound warnings, or plans degrade after bulk changes.
 
-## Domain rules
-Assume production data safety matters. Use actual plans/statistics/waits before tuning and never execute destructive or disruptive operations without explicit approval.
+## Diagnose first
+- `SELECT relname, n_live_tup, n_dead_tup, last_autovacuum, last_autoanalyze FROM pg_stat_user_tables ORDER BY n_dead_tup DESC LIMIT 15;`
+- Wraparound: `SELECT datname, age(datfrozenxid) FROM pg_database ORDER BY 2 DESC;` and per table `age(relfrozenxid)`.
+- Running vacuums: `SELECT * FROM pg_stat_progress_vacuum;`
+- Blockers: old transactions, unused replication slots (`backend_xmin`, `xmin` in `pg_replication_slots`), prepared transactions (`pg_prepared_xacts`).
+- Bloat estimate with `pgstattuple` when installed.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Vacuum cannot remove tuples visible to the oldest transaction: fix long transactions, stale slots and forgotten prepared transactions before tuning.
+- Hot, large tables: lower per-table `autovacuum_vacuum_scale_factor` (and `autovacuum_vacuum_insert_scale_factor` on PG 13+) rather than only global changes; raise cost limits if vacuum is throttled too much.
+- After large loads or deletes: run `ANALYZE` explicitly.
+- Reclaiming space to the OS needs `VACUUM FULL` (exclusive lock, rewrite) or `pg_repack`; ordinary vacuum only makes space reusable.
+- Approaching wraparound: prioritize aggressive vacuum on the oldest tables immediately.
 
-## Focus checks
-- inspect dead tuples/freeze age.
-- tune per table when justified.
-- avoid VACUUM FULL reflexively.
-- refresh stats after major changes.
+## Anti-patterns
+- Disabling autovacuum; scheduling `VACUUM FULL` routinely; ignoring `age(relfrozenxid)`; tuning while an old transaction still pins the horizon.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+`VACUUM FULL`, `REINDEX` (non-concurrent), `pg_repack` and `autovacuum` parameter changes need approval and disk-space check (a rewrite needs about the table size free).
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `n_dead_tup` and table/index size trend down, `last_autovacuum` recent, `age(datfrozenxid)` well below `autovacuum_freeze_max_age`, plans and index-only scans recover.

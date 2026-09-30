@@ -1,35 +1,32 @@
 ---
 name: postgres-backup-pitr-replication
-description: "Design base backups, WAL archiving, PITR, replicas, lag monitoring, and recovery tests. Use when work involves postgresql backup pitr replication."
+description: "Design and verify PostgreSQL backups, WAL archiving, point-in-time recovery and replication. Use when planning backups or restores, a replica lags or breaks, WAL fills the disk, or RPO/RTO are undefined."
 ---
 
 # PostgreSQL Backup PITR Replication
 
-Design base backups, WAL archiving, PITR, replicas, lag monitoring, and recovery tests.
+## Use when
+- Choosing a backup method, restoring to a point in time, building or repairing a replica, or WAL/disk growth from replication slots.
 
-## Domain rules
-Assume production data safety matters. Use actual plans/statistics/waits before tuning and never execute destructive or disruptive operations without explicit approval.
+## Diagnose first
+- `SELECT version(); SHOW wal_level; SHOW archive_mode; SHOW archive_command; SHOW max_wal_senders;`
+- `SELECT * FROM pg_stat_archiver;` (failed_count, last_failed_time) and `SELECT * FROM pg_stat_replication;` (state, sent/write/flush/replay lag).
+- Slots holding WAL: `SELECT slot_name, active, restart_lsn, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained FROM pg_replication_slots;`
+- Replica: `SELECT pg_is_in_recovery(), now()-pg_last_xact_replay_timestamp() AS replay_delay;`
+- Inventory: tool (pgBackRest, Barman, pg_basebackup), last full, last restore test, WAL retention.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- `pg_dump` is logical (single database, portable, slow to restore at scale). PITR needs a physical base backup plus continuous WAL archiving.
+- Recovery to a time or LSN: restore base backup, set `restore_command` and a recovery target, then `recovery_target_action`; confirm with the tool's documented procedure for the installed major version.
+- An inactive replication slot retains WAL forever: drop it or fix the consumer, and consider `max_slot_wal_keep_size`.
+- Streaming replica lag: check network, replica I/O, long queries conflicting with replay (`max_standby_streaming_delay`, `hot_standby_feedback` trade-off: feedback causes bloat on the primary).
+- Synchronous replication trades write latency and availability for zero data loss; decide by RPO, not by default.
 
-## Focus checks
-- define RPO/RTO.
-- verify WAL retention/archives.
-- test restores to target time.
-- plan replica promotion/failback.
+## Anti-patterns
+- Archiving to the same disk; `archive_command` that returns success without copying; never testing a restore; deleting files from `pg_wal` by hand.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Approval before: promoting a replica, dropping slots, changing `archive_command`, `pg_resetwal`, restoring over a live cluster, `pg_rewind`. Restore into a separate host first.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Restore test reaches the target time, `SELECT` on known rows matches, application smoke test passes, RTO measured. `pg_stat_archiver.failed_count` stable; replay lag near zero.

@@ -1,35 +1,32 @@
 ---
 name: postgres-query-optimization
-description: "Improve SQL using planner statistics, query shape, joins, predicates, and measured plans. Use when work involves postgresql query optimization."
+description: "Optimize specific PostgreSQL queries by rewriting SQL, fixing estimates and reducing round trips. Use when one statement dominates pg_stat_statements, pagination is slow, or an ORM produces N+1 or huge joins."
 ---
 
 # PostgreSQL Query Optimization
 
-Improve SQL using planner statistics, query shape, joins, predicates, and measured plans.
+## Use when
+- A known query is slow, called too often, returns too many rows, or plan quality degrades with data growth.
 
-## Domain rules
-Assume production data safety matters. Use actual plans/statistics/waits before tuning and never execute destructive or disruptive operations without explicit approval.
+## Diagnose first
+- Rank first: `pg_stat_statements` by `total_exec_time`, then check `calls`, `mean_exec_time`, `rows`, `shared_blks_read`.
+- `EXPLAIN (ANALYZE, BUFFERS)` on realistic data (see postgres-explain-analyze).
+- App side: count queries per request (N+1), and payload size versus rows used.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Filter early and select only needed columns; wide `SELECT *` blocks index-only scans and inflates I/O.
+- Deep `OFFSET`: use keyset pagination on an indexed, unique ordering.
+- `IN (subquery)` vs `EXISTS` vs `JOIN`: since PG 12 CTEs are inlined unless `MATERIALIZED` is written or they are recursive/side-effecting; test alternatives with real plans.
+- Repeated per-row lookups from the app: batch with `= ANY($1)` or a join.
+- Large aggregate on OLTP path: precompute (materialized view refreshed `CONCURRENTLY` with a unique index) or summarize incrementally.
+- Bulk writes: multi-row `INSERT`, `COPY`, or `INSERT ... ON CONFLICT`; batch in chunks.
+- Wrong estimates: `ANALYZE`, extended statistics, or rewrite; hints do not exist in core Postgres.
 
-## Focus checks
-- capture representative bind values.
-- inspect actual rows/buffers.
-- identify estimate errors.
-- fix root cause before planner coercion.
+## Anti-patterns
+- `DISTINCT` to mask duplicate joins; `NOT IN` with nullable subquery (use `NOT EXISTS`); functions on indexed columns in WHERE; `COUNT(*)` on huge tables for UI totals.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Rewrites must preserve results and ordering contracts; get caller review for changed semantics. Materialized view refresh and bulk DML need approval and batching on production.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Before/after `EXPLAIN (ANALYZE, BUFFERS)` and `pg_stat_statements` deltas; identical result sets on a sample; no new lock waits.

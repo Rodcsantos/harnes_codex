@@ -1,35 +1,32 @@
 ---
 name: postgres-schema-design
-description: "Design PostgreSQL constraints, types, keys, indexes, and data models around workload and integrity. Use when work involves postgresql schema design."
+description: "Design PostgreSQL schemas: types, constraints, keys, partitioning and safe migrations. Use when modeling tables, changing columns, adding constraints or partitions, or planning zero-downtime DDL."
 ---
 
 # PostgreSQL Schema Design
 
-Design PostgreSQL constraints, types, keys, indexes, and data models around workload and integrity.
+## Use when
+- New tables, type changes, adding NOT NULL/FK/UNIQUE on live data, partitioning decisions, multi-tenant modeling.
 
-## Domain rules
-Assume production data safety matters. Use actual plans/statistics/waits before tuning and never execute destructive or disruptive operations without explicit approval.
+## Diagnose first
+- `\d+ t` or `SELECT * FROM information_schema.columns WHERE table_name='t';`; existing conventions in migrations.
+- Size and growth: `SELECT pg_size_pretty(pg_total_relation_size('t')), reltuples FROM pg_class WHERE oid='t'::regclass;`
+- Locks that DDL would wait on: `SELECT * FROM pg_locks WHERE relation='t'::regclass;` and long transactions in `pg_stat_activity`.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Types: `bigint` identity keys (`GENERATED ... AS IDENTITY`), `numeric` for money, `timestamptz` for instants, `text` over `varchar(n)` unless a limit is a real rule, `uuid` when ids are generated outside.
+- Enforce integrity in the database: `NOT NULL`, `CHECK`, `UNIQUE`, FKs with index on the referencing column.
+- Adding a constraint without a long lock: `ADD CONSTRAINT ... NOT VALID` then `VALIDATE CONSTRAINT`; `NOT NULL` via validated `CHECK` first (PG 12+ can then set NOT NULL cheaply).
+- Adding a column with a constant default is metadata-only since PG 11; volatile defaults rewrite the table.
+- Partition (declarative, PG 10+) only for very large tables with a natural key such as time, mainly for retention and pruning; every unique key must include the partition key.
+- JSONB for sparse or evolving attributes; keep queried fields as real columns.
+- Set `lock_timeout` on migrations so DDL fails fast instead of queueing behind traffic.
 
-## Focus checks
-- use constraints deliberately.
-- choose types with semantics.
-- model nullability carefully.
-- consider index/write/storage cost.
+## Anti-patterns
+- `serial` for new designs when identity is available; storing money as float; enum types that change often; FK without index; one giant migration doing DDL and backfill together.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+DDL on production needs approval, `lock_timeout`, a rollback migration and a backfill in batches. `ALTER TYPE` and rewrites can block for hours on big tables.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Migration rehearsed on a production-size copy with timings; `\d+` matches intent; constraints validated; app tests pass; rollback tested.
