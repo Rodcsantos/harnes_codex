@@ -10,7 +10,7 @@
 - react_expert
 - redis_expert
 
-O projeto acrescenta infra_expert.
+O projeto acrescenta infra_expert e 7 agentes de processo (tech_lead, explorer, architect, test_engineer, verifier, reviewer, security_reviewer). Veja `docs/TEAM.md`.
 
 ## 65 skills originais
 Django: django-architecture, django-auth-permissions, django-migrations, django-models, django-orm-optimization, django-production, django-rest-api, django-transactions.
@@ -21,5 +21,8 @@ Python: python-architecture, python-asyncio, python-debugging, python-packaging,
 React: react-accessibility, react-architecture, react-debugging, react-forms-validation, react-hooks, react-performance, react-server-state, react-state, react-testing, react-typescript.
 Redis: redis-cache-design, redis-data-modeling, redis-hotkeys-bigkeys, redis-invalidation, redis-locking-rate-limit, redis-memory-eviction, redis-persistence-ha-observability, redis-streams-queues.
 Shared: shared-api-design, shared-code-review, shared-production-readiness, shared-root-cause-analysis, shared-security-review, shared-testing-strategy.
+
+## Skills de fluxo (5)
+flow-plan, flow-implement, flow-verify, flow-review, flow-ship.
 
 specialists/manifest.json é a lista canônica do pacote.

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Flow Implement"
+  short_description: "Execute the plan with tests first"
+  default_prompt: "Use $flow-implement to run this stage of the engineering flow with evidence."
+policy:
+  allow_implicit_invocation: true

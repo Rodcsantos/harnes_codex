@@ -1,13 +1,21 @@
 {
   "agents": [
+    "architect.toml",
     "django-expert.toml",
+    "explorer.toml",
     "fullstack-orchestrator.toml",
+    "infra-expert.toml",
     "mysql-dba.toml",
     "php-expert.toml",
     "postgresql-dba.toml",
     "python-expert.toml",
     "react-expert.toml",
-    "redis-expert.toml"
+    "redis-expert.toml",
+    "reviewer.toml",
+    "security-reviewer.toml",
+    "tech-lead.toml",
+    "test-engineer.toml",
+    "verifier.toml"
   ],
   "skills": [
     "django-architecture",
@@ -18,6 +26,11 @@
     "django-production",
     "django-rest-api",
     "django-transactions",
+    "flow-implement",
+    "flow-plan",
+    "flow-review",
+    "flow-ship",
+    "flow-verify",
     "mysql-backup-replication",
     "mysql-indexing",
     "mysql-innodb-memory",

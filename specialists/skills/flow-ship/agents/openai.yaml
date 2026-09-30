@@ -1,0 +1,6 @@
+interface:
+  display_name: "Flow Ship"
+  short_description: "Commit and PR with evidence (manual)"
+  default_prompt: "Use $flow-ship to run this stage of the engineering flow with evidence."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Flow Verify"
+  short_description: "Lint, types, tests, build with evidence"
+  default_prompt: "Use $flow-verify to run this stage of the engineering flow with evidence."
+policy:
+  allow_implicit_invocation: true

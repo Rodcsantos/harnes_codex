@@ -25,6 +25,17 @@ This repository is the canonical source for the WSL + Codex development harness.
 
 Do not spawn every specialist by default. Delegate only when the domain materially benefits.
 
+## Engineering team and flow
+- Process agents: tech_lead (plans/delegates, never edits), explorer (read-only map), architect (read-only plan), test_engineer (tests only), verifier (evidence), reviewer and security_reviewer (independent, read-only).
+- Default flow for non-trivial work: flow-plan -> flow-implement -> flow-verify -> flow-review -> flow-ship (manual).
+- Keep the plan in `.harness/plan.md` instead of chat history. Delegations state goal, scope, output format and a word limit (default 200 words).
+- Trivial edits (one file, no design risk) skip the flow: edit, verify, done.
+
+## Enforcement (hooks, not prose)
+- Guard blocks destructive commands, force/main pushes and secret access; risky-but-legit commands ask for approval.
+- Post-edit reports format/lint/syntax errors right after each edit. Stop gate refuses to finish while the verify command fails.
+- Project verify command: `HARNESS_VERIFY_CMD` or `.harness/verify.sh`.
+
 ## Database safety
 - Production database access is read-only by default.
 - Never run DROP, TRUNCATE, destructive ALTER, bulk delete, failover, restore, role/privilege changes, or irreversible maintenance without explicit approval.

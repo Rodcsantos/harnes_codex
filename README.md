@@ -4,8 +4,10 @@ Repositório canônico do ambiente **WSL + Codex CLI**: setup, economia de token
 
 ## Estado atual
 
-- **9 agentes especializados**: Python, Django, PHP, React, MySQL, PostgreSQL, Redis, infraestrutura e orquestração full-stack.
-- **65 skills** especializadas, cada uma com `SKILL.md` e `agents/openai.yaml`.
+- **16 agentes**: 9 especialistas de stack (Python, Django, PHP, React, MySQL, PostgreSQL, Redis, infraestrutura, orquestração full-stack) + 7 de processo (tech lead, explorer, architect, test engineer, verifier, reviewer, security reviewer).
+- **70 skills**: 65 de domínio + 5 de fluxo (`flow-plan`, `flow-implement`, `flow-verify`, `flow-review`, `flow-ship`), cada uma com `SKILL.md` e `agents/openai.yaml`.
+- **Codex CLI e Claude Code** com a mesma fonte: agentes Claude gerados dos TOML (`claude/agents/`), `CLAUDE.md` importa o `AGENTS.md`.
+- **Hooks** (`hooks/`): guard, post-edit, stop-gate e session-start. Veja `docs/HOOKS-LSP-MCP.md`.
 - **144/144 arquivos** do pacote original `codex-dev-specialists` recuperados e versionados em `specialists/`.
 - Stack de eficiência: **RTK, Atlas, SigMap, Serena, mcp2cli/mcpq, Headroom e Tokview**.
 - Documentação histórica preservada em `archive/`.
@@ -66,8 +68,11 @@ chmod +x scripts/*.sh
 # Ferramentas de eficiência/contexto para Codex
 ./scripts/install-codex-efficient-stack.sh
 
-# 9 agentes + 65 skills
-./scripts/install-specialists.sh
+# Time completo + skills + hooks nos dois CLIs (ou --engine codex|claude)
+./scripts/install-harness.sh --engine both
+
+# Opcional: language servers (LSP)
+./scripts/install-lsp.sh python ts
 
 # Diagnóstico final
 ./scripts/verify.sh
@@ -81,6 +86,13 @@ Sem instalar nada na home:
 
 ```bash
 python3 specialists/verify.py specialists
+```
+
+Testes dos hooks e sincronia dos agentes Claude:
+
+```bash
+python3 -m unittest discover -s tests
+python3 scripts/build-claude-agents.py --check
 ```
 
 Validação de shell:
@@ -103,6 +115,8 @@ Comece por:
 
 - `docs/PROJECT-CENTRAL.md` — visão consolidada.
 - `docs/ARCHITECTURE.md` — arquitetura do harness.
+- `docs/TEAM.md` — time, fluxo e regras de contexto.
+- `docs/HOOKS-LSP-MCP.md` — hooks, LSP e MCP.
 - `docs/SPECIALISTS.md` — catálogo de agentes/skills.
 - `docs/INFRASTRUCTURE.md` — escopo operacional de infraestrutura.
 - `docs/TOKEN-EFFICIENCY.md` — política de economia de tokens.

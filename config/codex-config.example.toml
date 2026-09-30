@@ -18,3 +18,7 @@ command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
 
 # Keep secrets in environment variables, never in this file.
+# Browser automation for UI verification (enable only in projects that need it).
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
