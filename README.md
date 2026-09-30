@@ -4,7 +4,7 @@ Repositório canônico do ambiente **WSL + Codex CLI**: setup, economia de token
 
 ## Estado atual
 
-- **16 agentes**: 9 especialistas de stack (Python, Django, PHP, React, MySQL, PostgreSQL, Redis, infraestrutura, orquestração full-stack) + 7 de processo (tech lead, explorer, architect, test engineer, verifier, reviewer, security reviewer).
+- **42 agentes-fonte**, cobrindo Product, Arquitetura, Frontend, Backend, Mobile, Dados, QA, Segurança, DevOps, SRE, Delivery e DX. O default instala só 4 agentes core + especialistas inferidos pelas stacks escolhidas.
 - **70 skills no catálogo fonte**: 65 de domínio + 5 de fluxo. A instalação global é seletiva por stack para não carregar descrições irrelevantes em toda sessão.
 - **Codex CLI e Claude Code** com a mesma fonte: agentes Claude gerados dos TOML (`claude/agents/`), `CLAUDE.md` importa o `AGENTS.md`.
 - **Hooks** (`hooks/`): guard, post-edit, stop-gate e session-start. Veja `docs/HOOKS-LSP-MCP.md`.
@@ -68,15 +68,18 @@ chmod +x scripts/*.sh
 # Ferramentas de eficiência/contexto para Codex
 ./scripts/install-codex-efficient-stack.sh
 
-# Base enxuta: flow-* + shared-* nos dois CLIs
+# Base enxuta: 4 agentes core + flow-* + shared-*
 ./scripts/install-harness.sh --engine both
 
-# Adicione somente as stacks deste projeto, por exemplo:
+# Stacks inferem seus especialistas:
 ./scripts/install-harness.sh --engine both --skills react,php
-./scripts/install-harness.sh --engine both --skills django,postgres,redis
 
-# Catálogo completo somente para laboratório/projeto realmente multi-stack:
-# ./scripts/install-harness.sh --engine both --skills all
+# Perfis do ciclo de vida só quando necessários:
+./scripts/install-harness.sh --engine both --skills react --agents product,architecture,frontend
+./scripts/install-harness.sh --engine both --skills django,postgres --agents backend,data,qa,security
+
+# Catálogo completo somente para laboratório:
+# ./scripts/install-harness.sh --engine both --skills all --agents all
 
 # Opcional: language servers (LSP)
 ./scripts/install-lsp.sh python ts
@@ -85,7 +88,7 @@ chmod +x scripts/*.sh
 ./scripts/verify.sh
 ```
 
-O instalador mantém todos os agentes, mas instala por padrão apenas as skills `flow-*` e `shared-*`. Packs de domínio são adicionados com `--skills`. No Codex, entradas substituídas/removidas são preservadas em `$CODEX_HOME/backups/`.
+O repositório mantém todos os 42 agentes, mas `--agents auto` instala apenas `tech-lead`, `explorer`, `reviewer`, `verifier` e os especialistas inferidos por `--skills`. Perfis de SDLC são opcionais. No Codex, entradas substituídas/removidas são preservadas em `$CODEX_HOME/backups/`.
 
 ## Verificação do pacote
 
@@ -126,5 +129,7 @@ Comece por:
 - `docs/HOOKS-LSP-MCP.md` — hooks, LSP e MCP.
 - `docs/SPECIALISTS.md` — catálogo de agentes/skills.
 - `docs/INFRASTRUCTURE.md` — escopo operacional de infraestrutura.
-- `docs/TOKEN-EFFICIENCY.md` — política de economia de tokens.\n- `docs/UPSTREAM-GUIDANCE.md` — fontes oficiais e decisões da auditoria OpenAI/Claude.
+- `docs/TOKEN-EFFICIENCY.md` — política de economia de tokens.
+- `docs/LIFECYCLE-AGENTS.md` — catálogo completo das 35 funções do SDLC e seus agentes.
+- `docs/UPSTREAM-GUIDANCE.md` — fontes oficiais e decisões da auditoria OpenAI/Claude.
 - `docs/SOURCE-MANIFEST.md` — origem e fidelidade dos artefatos.
