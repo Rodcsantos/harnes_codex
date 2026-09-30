@@ -1,35 +1,33 @@
 ---
 name: django-orm-optimization
-description: "Diagnose N+1, queryset evaluation, joins, prefetching, annotations, and query counts. Use when work involves django orm optimization."
+description: "Optimize Django ORM queries: N+1, select_related/prefetch_related, indexing, bulk operations and pagination. Use when a view or API is slow, query counts are high, or memory blows up loading large querysets."
 ---
 
 # Django ORM Optimization
 
-Diagnose N+1, queryset evaluation, joins, prefetching, annotations, and query counts.
+## Use when
+- Many queries per request, slow list endpoints, admin slowness, large exports, or `.count()`/`len()` misuse.
 
-## Domain rules
-Follow the project Django version and installed ecosystem. Treat ORM query behavior, migrations, permissions, and transactions as production concerns.
+## Diagnose first
+- Count queries: `django.test.utils.CaptureQueriesContext` or `assertNumQueries` in a test; in dev use `django-debug-toolbar` or `connection.queries` with `DEBUG=True`.
+- Inspect one query: `print(qs.query)` and `qs.explain(analyze=True)` (EXPLAIN executes the query: safe SELECTs only).
+- Find loops touching relations: attribute access on FK/related managers inside `for` loops or serializers.
+- Slow ones from the database: see mysql/postgres skills for `pg_stat_statements`/slow log.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- FK/one-to-one accessed in loops: `select_related`. Reverse FK/M2M: `prefetch_related` (use `Prefetch(queryset=...)` to filter or `only`).
+- Need few columns: `only()`/`defer()`/`values()`/`values_list()`; do not load full objects for aggregates.
+- Aggregates in the database: `annotate`, `aggregate`, `Count`, `Sum`, `Exists()` subqueries instead of Python loops; `qs.exists()` not `if qs:`; `qs.count()` not `len(qs)` when rows are not needed.
+- Bulk: `bulk_create(batch_size=...)`, `bulk_update`, `update()`/`delete()` on querysets (these skip `save()` and signals).
+- Large iterations: `iterator(chunk_size=...)` (with server-side cursors caveats behind poolers).
+- Pagination: keyset for deep pages; `Paginator` counts are costly on huge tables.
+- Add indexes for real filters and orderings after measuring.
 
-## Focus checks
-- inspect generated SQL/query count.
-- choose select_related vs prefetch intentionally.
-- avoid loop queries.
-- validate pagination/count behavior.
+## Anti-patterns
+- `prefetch_related` on everything; `.all()` in templates; `Model.objects.get()` inside loops; `count()` on every request for UI totals; `distinct()` hiding join duplicates.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+`bulk_*` and queryset `update()` on production data need a bounded WHERE, a count check first and approval; batch large writes.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `assertNumQueries` regression test with the new bound; before/after query count, `EXPLAIN` and endpoint latency on realistic data; result parity checked.

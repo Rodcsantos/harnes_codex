@@ -1,35 +1,32 @@
 ---
 name: django-production
-description: "Review Django deployment, caching, static/media, workers, health checks, and security settings. Use when work involves django production."
+description: "Prepare Django for production: settings, security flags, static files, workers, logging and deploy checks. Use when deploying, hardening settings, debugging production-only failures or configuring gunicorn/ASGI."
 ---
 
 # Django Production
 
-Review Django deployment, caching, static/media, workers, health checks, and security settings.
+## Use when
+- First deploy, environment split, HTTPS and cookie hardening, static/media handling, worker tuning, or incident debugging in production.
 
-## Domain rules
-Follow the project Django version and installed ecosystem. Treat ORM query behavior, migrations, permissions, and transactions as production concerns.
+## Diagnose first
+- `python manage.py check --deploy` (read every warning); `python manage.py diffsettings | head -50`.
+- `DEBUG`, `ALLOWED_HOSTS`, `SECRET_KEY` source, `CSRF_TRUSTED_ORIGINS`, `SECURE_*`, `DATABASES` (`CONN_MAX_AGE`/pooling), `CACHES`, `LOGGING`.
+- Process model: gunicorn/uvicorn workers, timeouts, memory per worker; reverse proxy headers (`SECURE_PROXY_SSL_HEADER` only behind a trusted proxy).
+- `python manage.py migrate --plan` and `collectstatic --dry-run`.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- `DEBUG=False`, secrets from the environment, explicit `ALLOWED_HOSTS`, `SECURE_SSL_REDIRECT`, HSTS, secure/HttpOnly cookies.
+- Static files: `collectstatic` at build, served by the proxy/CDN or WhiteNoise; user uploads on external storage, not container disk.
+- Workers: sync gunicorn workers ~ (2 x cores)+1 as a starting point, then measure; long tasks go to a queue (Celery/RQ), not the request.
+- Database connections: set `CONN_MAX_AGE` or use a pooler; watch total connections across workers.
+- Logging to stdout in structured form; error tracking (Sentry or equivalent); health endpoint that does not hit heavy dependencies.
+- Run migrations as a separate release step before new code that needs them (expand/contract).
 
-## Focus checks
-- check DEBUG/ALLOWED_HOSTS/CSRF/CORS.
-- verify worker and timeout model.
-- ensure static/media ownership.
-- add health/readiness without DB overload.
+## Anti-patterns
+- Running `runserver` in production; committing `.env`; `ALLOWED_HOSTS=['*']`; sending emails or calling APIs synchronously in requests; unbounded request timeouts.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Production settings, migrations, and restarts need approval and a rollback path (previous image/release). Never print secrets in logs.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `check --deploy` clean or explained; smoke test on staging with production-like settings; error and latency dashboards after release; rollback rehearsed.
