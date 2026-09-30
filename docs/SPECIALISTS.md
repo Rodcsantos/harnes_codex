@@ -1,16 +1,16 @@
 # Especialistas
 
-## Agentes do pacote original
-- django_expert
-- fullstack_orchestrator
-- mysql_dba
-- php_expert
-- postgresql_dba
-- python_expert
-- react_expert
-- redis_expert
+## Catálogo de agentes
 
-O projeto acrescenta infra_expert e 7 agentes de processo (tech_lead, explorer, architect, test_engineer, verifier, reviewer, security_reviewer). Veja `docs/TEAM.md`.
+O harness mantém **42 agentes-fonte** em `specialists/agents/`, gerando equivalentes Claude em `claude/agents/`.
+
+O default não instala os 42. `--agents auto` mantém apenas quatro agentes core e acrescenta especialistas pela stack selecionada com `--skills`. Os perfis completos estão em `specialists/agent-profiles.json` e a descrição funcional em `docs/LIFECYCLE-AGENTS.md`.
+
+Agentes core: tech-lead, explorer, reviewer, verifier.
+
+Perfis de SDLC: product, architecture, frontend, backend, mobile, data, qa, security, devops, sre, delivery, dx e fullstack.
+
+Especialistas de stack continuam disponíveis: python-expert, django-expert, php-expert, react-expert, mysql-dba, postgresql-dba, redis-expert e infra-expert.
 
 ## 65 skills originais
 Django: django-architecture, django-auth-permissions, django-migrations, django-models, django-orm-optimization, django-production, django-rest-api, django-transactions.
