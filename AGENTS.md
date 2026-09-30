@@ -65,12 +65,12 @@ This repository is the canonical source for the WSL + Codex/Claude development h
 ## Token-efficient context
 1. If the location is known, start with `rg`, a narrow line range, `git diff`, or the exact symbol.
 2. For an unfamiliar/large repository, use **Atlas or SigMap** to orient; do not run both by default. Keep the map/evidence budget small and focus it on the task.
-3. Use LSP/code-intelligence or Serena when definition/reference/symbol-aware refactoring avoids multiple file reads.
-4. Prefer native deferred tool discovery/tool search where the client supports it. Prefer a direct CLI over an MCP when it exposes the same operation compactly. Keep mcp2cli/mcpq only where native deferral is unavailable or measurably worse.
-5. Read whole files or broad directories only when the narrower evidence cannot answer the question.
-6. Treat subagents as a context-isolation/parallelism tool, not a default workflow: every subagent has its own context and consumes quota.
-7. Use RTK for noisy command output when it preserves the evidence needed for the task.
-8. After edits, reason from changed-file/diff context rather than re-reading the repository.
+4. Use LSP/code-intelligence or Serena when definition/reference/symbol-aware refactoring avoids multiple file reads.
+5. Prefer native deferred tool discovery/tool search where the client supports it. Prefer a direct CLI over an MCP when it exposes the same operation compactly. Keep mcp2cli/mcpq only where native deferral is unavailable or measurably worse.
+6. Read whole files or broad directories only when the narrower evidence cannot answer the question.
+7. Treat subagents as a context-isolation/parallelism tool, not a default workflow: every subagent has its own context and consumes quota.
+8. Use RTK for noisy command output when it preserves the evidence needed for the task.
+9. After edits, reason from changed-file/diff context rather than re-reading the repository.
 
 ## Definition of done
 Run only the checks relevant to the changed surface, widening from targeted checks to broader suites when risk justifies it. Completion requires fresh evidence for the behavior changed and no unexplained failures. Independent review/security review is required only when the risk, repository policy, or requested delivery stage calls for it.
