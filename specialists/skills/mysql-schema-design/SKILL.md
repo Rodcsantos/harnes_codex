@@ -1,35 +1,31 @@
 ---
 name: mysql-schema-design
-description: "Design InnoDB schemas, keys, constraints, types, and indexes for integrity and workload. Use when work involves mysql schema design."
+description: "Design or change MySQL schemas: types, keys, constraints, charset and online migration path. Use when creating tables, altering columns, choosing primary keys or data types, or planning a risky migration."
 ---
 
 # MySQL Schema Design
 
-Design InnoDB schemas, keys, constraints, types, and indexes for integrity and workload.
+## Use when
+- New table or feature model; column type change; adding constraints; large table migration; charset/collation decisions.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- `SHOW CREATE TABLE t\G`; `SELECT table_name, engine, table_rows, data_length, index_length, table_collation FROM information_schema.tables WHERE table_schema=DATABASE();`
+- Existing conventions in the repo's migrations (naming, timestamps, soft delete, tenancy column).
+- `SELECT @@sql_mode, @@character_set_server, @@collation_server, @@version;`
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- InnoDB table, explicit primary key, monotonically increasing when possible (`BIGINT UNSIGNED AUTO_INCREMENT`); random UUID keys fragment the clustered index (use ordered UUIDs or a surrogate key).
+- Smallest correct type: `INT` vs `BIGINT` by growth, `DECIMAL(p,s)` for money (never FLOAT), `DATETIME`/`TIMESTAMP` chosen deliberately (TIMESTAMP range ends in 2038).
+- `utf8mb4` for text; keep collation consistent across joined columns.
+- Enforce integrity in the database: `NOT NULL`, `UNIQUE`, foreign keys (with an index on the child column), `CHECK` (enforced from 8.0.16).
+- JSON columns for sparse attributes only; index queried paths through generated columns.
+- Changing a column on a large table: expand, backfill in batches, switch reads, contract later.
 
-## Focus checks
-- use correct data types/collations.
-- enforce invariants.
-- model cardinality.
-- consider write amplification.
+## Anti-patterns
+- EAV tables for core data; comma-separated lists in a column; nullable everything; `ENUM` for values that change often; missing FK index.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+DDL on production: choose explicit `ALGORITHM`/`LOCK`, check metadata-lock waiters, prefer gh-ost or pt-osc for large tables, take approval, keep a reversible migration. Type narrowing can silently truncate unless `sql_mode` is strict.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Migration runs on a copy with production-scale data; timing recorded; schema diff matches intent; application tests pass; rollback rehearsed.

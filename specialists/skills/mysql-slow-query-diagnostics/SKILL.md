@@ -1,35 +1,31 @@
 ---
 name: mysql-slow-query-diagnostics
-description: "Use slow log and Performance Schema to rank and investigate expensive workloads. Use when work involves mysql slow query diagnostics."
+description: "Find and rank MySQL slow queries with the slow log, digests and plans. Use when latency or load rises with no known culprit, or before choosing which query to optimize first."
 ---
 
 # MySQL Slow Query Diagnostics
 
-Use slow log and Performance Schema to rank and investigate expensive workloads.
+## Use when
+- p95 latency or CPU increased; a deploy changed load; a ranked list of worst queries is needed.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- Settings: `SELECT @@slow_query_log, @@long_query_time, @@log_queries_not_using_indexes, @@slow_query_log_file;`
+- Digest ranking: `SELECT DIGEST_TEXT, COUNT_STAR, ROUND(SUM_TIMER_WAIT/1e12,2) total_s, ROUND(AVG_TIMER_WAIT/1e9,1) avg_ms, SUM_ROWS_EXAMINED, SUM_ROWS_SENT FROM performance_schema.events_statements_summary_by_digest ORDER BY SUM_TIMER_WAIT DESC LIMIT 10;`
+- Or aggregate the file: `pt-query-digest slow.log` / `mysqldumpslow -s t`.
+- Running now: `SELECT * FROM sys.processlist WHERE command='Query' ORDER BY time DESC;`
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Rank by total time (frequency x latency), not by the single slowest execution.
+- Low `long_query_time` briefly (for example 0.2-1 s) during the incident, then restore; leaving it at 0 floods disk.
+- Rows examined/sent ratio above ~100 points to indexing; high `tmp_disk_tables` or sort merge passes point to sort/group design.
+- Lock waits show as long `Query_time` with tiny `Lock_time`/rows: switch to locking analysis (`sys.innodb_lock_waits`).
+- Digest counters reset on restart or `TRUNCATE`: compare like with like.
 
-## Focus checks
-- rank by total load not only max latency.
-- normalize repeated queries.
-- correlate with resource window.
-- capture plan for top offenders.
+## Anti-patterns
+- Optimizing the query that ran once in 10 s while a 5 ms query runs 2M times; changing several things at once; diagnosing on a cold cache.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing `slow_query_log` settings is a global change: note prior values and revert. Do not run diagnostics that scan large tables on a busy primary.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Same digest ranking after the fix shows lower total time; before/after numbers recorded from the same window and load.

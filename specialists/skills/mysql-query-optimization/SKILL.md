@@ -1,35 +1,31 @@
 ---
 name: mysql-query-optimization
-description: "Analyze query shape and execution plans to reduce scanned rows, latency, and temp work. Use when work involves mysql query optimization."
+description: "Rewrite and tune MySQL queries using execution plans and measured row counts. Use when a specific SQL statement is slow, scans too many rows, sorts on disk or is called too often."
 ---
 
 # MySQL Query Optimization
 
-Analyze query shape and execution plans to reduce scanned rows, latency, and temp work.
+## Use when
+- One query dominates latency or CPU; N+1 patterns in the application; large OFFSET pagination; heavy GROUP BY or subqueries.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- `EXPLAIN FORMAT=TREE` (or JSON) and compare estimated vs actual rows with `EXPLAIN ANALYZE` on a safe SELECT (8.0.18+).
+- `SELECT * FROM sys.statement_analysis WHERE query LIKE '%fragment%'\G`: exec count, rows examined vs sent, tmp tables, sort merge passes.
+- `SHOW WARNINGS` right after EXPLAIN for the rewritten query.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Rows examined much larger than rows sent: missing or unusable index, or non-sargable predicate. Fix predicate or index before restructuring SQL.
+- Deep pagination: replace `LIMIT n OFFSET big` with keyset (`WHERE (k) > last ORDER BY k LIMIT n`).
+- Correlated subquery or `IN (SELECT ...)`: try a JOIN or `EXISTS`; measure, because the 8.0 optimizer often already flattens them.
+- `SELECT *` on wide rows prevents covering indexes; select needed columns.
+- Selecting then updating in the app loop: collapse into set-based SQL or batched `IN` lists.
+- Leave hints (`USE INDEX`, `STRAIGHT_JOIN`, optimizer hints) as the last resort, with a comment and a test that proves the need.
 
-## Focus checks
-- capture exact SQL/bind shapes.
-- use EXPLAIN/ANALYZE if supported.
-- compare estimates vs actuals.
-- optimize biggest bottleneck first.
+## Anti-patterns
+- Functions on indexed columns in WHERE; `ORDER BY RAND()`; `COUNT(*)` on huge tables for UI badges; `DISTINCT` to hide a bad join; implicit collation or charset mismatch in joins.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Do not run `EXPLAIN ANALYZE` on statements with side effects. Changing an application query contract (ordering, columns) needs review of callers.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Plan and rows examined improved on production-like volume; results identical (diff a sample or compare checksums); latency percentile improved in the statement digest.

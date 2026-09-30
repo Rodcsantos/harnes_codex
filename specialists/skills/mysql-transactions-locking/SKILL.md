@@ -1,35 +1,32 @@
 ---
 name: mysql-transactions-locking
-description: "Diagnose InnoDB locks, deadlocks, isolation, transaction scope, and concurrency failures. Use when work involves mysql transactions and locks."
+description: "Analyze MySQL InnoDB transactions, isolation, deadlocks and lock waits. Use when there are deadlock errors, lock wait timeouts, long-running transactions, or inconsistent reads."
 ---
 
 # MySQL Transactions and Locks
 
-Diagnose InnoDB locks, deadlocks, isolation, transaction scope, and concurrency failures.
+## Use when
+- `Deadlock found when trying to get lock` or `Lock wait timeout exceeded`; replication lag from big transactions; undo/history list growth.
 
-## Domain rules
-Assume production data safety matters. Use EXPLAIN/metrics before tuning and never execute destructive or high-lock operations without explicit approval.
+## Diagnose first
+- `SHOW ENGINE INNODB STATUS\G`: section LATEST DETECTED DEADLOCK, TRANSACTIONS, history list length.
+- `SELECT * FROM sys.innodb_lock_waits\G` (waiting vs blocking statement, wait age).
+- `SELECT trx_id, trx_started, trx_rows_locked, trx_query FROM information_schema.innodb_trx ORDER BY trx_started;`
+- `SELECT @@transaction_isolation, @@innodb_lock_wait_timeout, @@autocommit;` Consider `innodb_print_all_deadlocks` for capture.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Default REPEATABLE READ uses next-key/gap locks; range scans on non-unique or unindexed columns lock more than expected. An index that narrows the scan reduces locks.
+- Deadlock cause is usually different lock ordering: access tables and rows in one consistent order, keep transactions short, retry the whole transaction on error 1213.
+- Lock wait on a hot row: shorten the transaction, move slow work outside it, update counters last.
+- `SELECT ... FOR UPDATE` only when you will write; `SKIP LOCKED` / `NOWAIT` (8.0) for queue-like workers.
+- READ COMMITTED reduces gap locking but changes semantics and requires row-based binlog: an owner decision.
+- Never hold a transaction open across user think time or network calls.
 
-## Focus checks
-- inspect lock waits/deadlocks.
-- keep transactions short.
-- lock rows in consistent order.
-- retry deadlocks only at safe boundary.
+## Anti-patterns
+- Long-lived `BEGIN` from ORMs or scripts left idle; retrying only the failed statement; bulk update of millions of rows in one transaction.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Approval before `KILL` on a transaction (rollback of a big transaction can itself take long) and before changing isolation level or timeouts globally.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Reproduce with two sessions or a test; after the fix, deadlock counter (`Innodb_deadlocks` or status output) stops rising, longest transaction age drops, and the retry path is covered by a test.
