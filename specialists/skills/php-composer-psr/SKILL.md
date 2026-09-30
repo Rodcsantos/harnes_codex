@@ -1,35 +1,31 @@
 ---
 name: php-composer-psr
-description: "Manage Composer dependencies, autoloading, scripts, and PSR interoperability safely. Use when work involves composer and psr."
+description: "Manage Composer dependencies, PSR-4 autoloading and PSR standards in PHP projects. Use when class not found errors appear, dependency conflicts arise, upgrading packages, or setting up a package or app skeleton."
 ---
 
 # Composer and PSR
 
-Manage Composer dependencies, autoloading, scripts, and PSR interoperability safely.
+## Use when
+- `Class ... not found`, version conflicts, adding/removing packages, publishing a library, or CI installing different versions than local.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- `composer validate`, `composer diagnose`, `composer why-not vendor/pkg 2.0`, `composer why vendor/pkg`.
+- `composer show -i` and `composer outdated --direct`; check `composer.lock` is committed and in sync (`composer install` vs `update`).
+- Autoload: read `autoload`/`autoload-dev` in `composer.json`; class file path must match namespace exactly (case-sensitive on Linux); `composer dump-autoload -o`.
+- PHP constraint: `composer config platform` and `require.php`.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Applications: commit `composer.lock`, deploy with `composer install --no-dev --optimize-autoloader`. Libraries: declare ranges, do not commit the lock unless the project convention says so.
+- `composer update vendor/pkg --with-dependencies` narrow updates, not blanket `composer update`.
+- PSR-4: one class per file, file name = class name, namespace prefix maps to a directory; PSR-12 for style; PSR-3 logger, PSR-7/15/17 for HTTP, PSR-11 for containers.
+- Use `require-dev` for tooling; `platform` config to pin the target PHP for resolution.
+- Security: `composer audit` for known advisories; review scripts (`post-install-cmd`) of new packages.
 
-## Focus checks
-- inspect composer.lock.
-- avoid unnecessary packages.
-- respect PSR autoloading.
-- verify install/update scope.
+## Anti-patterns
+- Editing `vendor/`; `composer update` in production; wildcard `*` constraints; classmap-authoritative flags without regenerating; running Composer as root in CI without `--no-scripts` review.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Major upgrades and lock changes need approval and a rollback (previous lock file). Do not run `composer update` on production hosts.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `composer validate --strict`, `composer install` from clean checkout, `composer audit`, tests pass, autoload optimized without class-not-found in a smoke test.

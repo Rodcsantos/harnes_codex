@@ -1,35 +1,31 @@
 ---
 name: php-modern
-description: "Use project-compatible PHP 8.x features with strict and maintainable language patterns. Use when work involves modern php."
+description: "Modernize PHP code with typed properties, enums, readonly, match and attributes without breaking compatibility. Use when upgrading PHP versions, cleaning legacy code, or writing new code that should use current language features."
 ---
 
 # Modern PHP
 
-Use project-compatible PHP 8.x features with strict and maintainable language patterns.
+## Use when
+- Migrating to PHP 8.x, adding strict types, replacing arrays-of-everything with typed objects, or resolving deprecations.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- `php -v`, `composer.json` `require.php`, CI PHP versions; `php -d error_reporting=E_ALL -l file.php` for syntax under the target version.
+- Deprecations: run tests with `E_ALL` and `error_log`; use Rector in dry-run (`rector process --dry-run`) and PHPCompatibility/PHPStan for the target version.
+- Which features the minimum supported version allows (do not use 8.1 features on 7.4/8.0 targets).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- `declare(strict_types=1);` in new files; scalar/union/return types on public methods; `?T`/`T|U` instead of docblock-only types.
+- Constructor property promotion (8.0+), `readonly` properties (8.1+), `readonly` classes (8.2+), enums (8.1+) for closed sets, `match` instead of `switch` for value mapping, first-class callable syntax (8.1+), `#[Attributes]` (8.0+).
+- Prefer value objects/DTOs over associative arrays for structured data; `never`, `static` return types where precise.
+- Use `str_contains/str_starts_with` (8.0+), null-safe operator `?->`.
+- Upgrade incrementally: fix deprecations on current version first, then bump.
+- Confirm each feature against the project's minimum PHP version before using it.
 
-## Focus checks
-- confirm PHP version.
-- prefer strict types where convention allows.
-- use enums/value objects judiciously.
-- avoid dynamic-property legacy traps.
+## Anti-patterns
+- Mass automated rewrites in one commit; adding types that change behavior (int/string coercion) without tests; `mixed` everywhere; enabling `strict_types` on legacy files without checking call sites.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+PHP version bumps and strict-type rollouts on legacy code can change runtime behavior: staged rollout with tests and approval.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Test suite and static analysis pass on all supported PHP versions in CI; no new deprecation notices; Rector dry-run shows no unintended edits.

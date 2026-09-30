@@ -1,35 +1,32 @@
 ---
 name: php-testing-static-analysis
-description: "Use PHPUnit/Pest plus PHPStan/Psalm to improve correctness without noise. Use when work involves php testing and analysis."
+description: "Test PHP with PHPUnit/Pest and enforce quality with PHPStan/Psalm, code style and CI gates. Use when adding tests, fixing flaky suites, raising static analysis levels, or setting up quality tooling."
 ---
 
 # PHP Testing and Analysis
 
-Use PHPUnit/Pest plus PHPStan/Psalm to improve correctness without noise.
+## Use when
+- New behavior or bug fixes need tests, static analysis errors appear, legacy code needs a baseline, or CI gates are missing.
 
-## Domain rules
-Follow composer.json/lock, PHP version, PSR/framework conventions, and the project static-analysis/testing toolchain.
+## Diagnose first
+- Tooling present: `composer.json` scripts, `phpunit.xml(.dist)`, `phpstan.neon`, `psalm.xml`, `.php-cs-fixer.php`, `pint.json`.
+- Run narrow: `vendor/bin/phpunit --filter Name`, `--testsuite Unit`; slow tests: `--log-junit` or Pest `--profile`.
+- Static analysis level: `vendor/bin/phpstan analyse --level=max --memory-limit=1G` on one path first.
+- Coverage: `XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text` (or PCOV).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Bug fix: write the failing test first, then fix. Test behavior via public API; unit tests without DB/network, integration tests for repositories and HTTP layers.
+- Data providers for input tables; test doubles (Mockery/PHPUnit mocks) only at boundaries; use an in-memory or transactional test database for persistence.
+- Determinism: fixed clock (inject a clock), seeded randomness, refresh state between tests, no order dependence.
+- PHPStan/Psalm: raise the level gradually per directory; use a baseline for legacy errors and forbid new ones; fix types instead of ignoring (`@phpstan-ignore` with reason only).
+- Style automated (PHP-CS-Fixer/Pint) so review focuses on logic.
+- CI runs lint, static analysis, tests, and `composer audit` on every PR.
 
-## Focus checks
-- test behavior not implementation.
-- raise static level incrementally.
-- avoid blanket ignores.
-- run targeted then broader suite.
+## Anti-patterns
+- Tests coupled to implementation details; mocking the class under test; assertions on private state; regenerating the baseline to hide new errors; skipping tests to go green.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Do not run tests against shared or production databases; verify the test environment config before running destructive fixtures.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- New test fails without the fix; suite and static analysis pass in CI; baseline size does not grow; coverage of changed lines reviewed.
