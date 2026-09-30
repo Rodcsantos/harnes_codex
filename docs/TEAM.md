@@ -42,3 +42,26 @@ Main agent -> skill/domínio mínimo -> edição -> verificação direcionada. S
 5. RTK em stdout ruidoso; diffs e arquivos alterados após edição.
 6. `/clear` entre tarefas não relacionadas no Claude Code.
 7. Cada agente recebe objetivo, escopo e saída curta; não recebe histórico irrelevante.
+
+
+## Perfis do ciclo de vida
+
+O catálogo fonte possui **42 agentes**, mas o default `--agents auto` instala somente:
+`tech-lead`, `explorer`, `reviewer`, `verifier` + especialistas inferidos por `--skills`.
+
+Perfis opcionais:
+- `product`: product-manager, product-discovery, business-analyst, ux-ui-designer.
+- `architecture`: architect, software-architect.
+- `frontend`: react-expert, frontend-performance.
+- `backend`: backend-engineer, api-integration.
+- `mobile`: mobile-engineer.
+- `data`: database-architect, database-performance, mysql-dba, postgresql-dba, redis-expert.
+- `qa`: qa-architect, test-engineer, e2e-browser, performance-engineer.
+- `security`: security-architect, security-reviewer, secops.
+- `devops`: devops-engineer, platform-engineer, infra-expert, cloud-iac, kubernetes-engineer.
+- `sre`: sre-engineer, observability-engineer, incident-rca.
+- `delivery`: release-manager, documentation-agent.
+- `dx`: developer-experience.
+- `fullstack`: fullstack-orchestrator.
+
+O catálogo funcional completo está em `docs/LIFECYCLE-AGENTS.md`. A existência de um perfil não significa que todos os agentes dele devam ser usados na mesma tarefa.
