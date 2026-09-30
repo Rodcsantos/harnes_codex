@@ -1,35 +1,31 @@
 ---
 name: redis-data-modeling
-description: "Choose Redis structures, key naming, cardinality, serialization, and lifecycle intentionally. Use when work involves redis data modeling."
+description: "Model data in Redis with the right data structures, key naming and access patterns. Use when choosing between strings, hashes, sets, sorted sets, lists, streams or JSON, or when a model needs multi-key atomicity."
 ---
 
 # Redis Data Modeling
 
-Choose Redis structures, key naming, cardinality, serialization, and lifecycle intentionally.
+## Use when
+- New feature storing state in Redis; slow or memory-heavy existing model; queries need range, membership or ranking.
 
-## Domain rules
-Assume production safety and latency matter. Prefer bounded SCAN/sampling; never use destructive global commands without explicit approval.
+## Diagnose first
+- List the access patterns first (read by id, by range, top-N, membership, counters) and their frequency.
+- Inspect real data: `TYPE key`, `MEMORY USAGE key`, `OBJECT ENCODING key`, `HLEN/SCARD/ZCARD/LLEN/XLEN`.
+- `redis-cli --bigkeys` or `--memkeys` on a replica or off-peak (they scan).
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Per-entity fields: hash (small hashes use compact encodings; check `hash-max-listpack-entries` for your version). Counters: `INCR`/`HINCRBY`.
+- Membership and dedup: set. Ranking, time ordering, sliding windows: sorted set with score. Queue or log semantics with consumers: stream (see redis-streams-queues).
+- Secondary lookups: maintain an index key (set or sorted set of ids) updated in the same MULTI/Lua step as the write.
+- Multi-key operations must live in one hash slot on Redis Cluster: use hash tags `{user:42}:...` deliberately, and only where needed.
+- Bound every collection (trim, TTL, max size); design for the largest realistic tenant.
+- Atomicity across keys: `MULTI/EXEC` (no rollback of logic errors) or Lua/functions; keep scripts short since they block the server.
 
-## Focus checks
-- estimate key cardinality.
-- choose structure by operations.
-- define TTL ownership.
-- avoid unbounded collections.
+## Anti-patterns
+- One giant hash/set/list per app; JSON blobs rewritten wholesale for one field change; using `KEYS`; lists as random-access arrays; storing relational joins in Redis.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Changing an encoding or key shape on live data needs dual-write or versioned keys and a migration plan; no bulk deletes without approval.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Each access pattern runs in O(1)/O(log n)/bounded O(n) as designed (check `SLOWLOG GET 10`); `MEMORY USAGE` per entity within budget; test covers concurrent writers.

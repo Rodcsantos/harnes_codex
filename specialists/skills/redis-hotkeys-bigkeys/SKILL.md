@@ -1,35 +1,31 @@
 ---
 name: redis-hotkeys-bigkeys
-description: "Find hot/big keys safely and redesign access or sharding patterns without blocking production. Use when work involves redis hot keys and big keys."
+description: "Find and fix Redis hot keys and big keys that cause latency spikes, memory imbalance or blocking. Use when Redis latency spikes, one shard or CPU core is saturated, or DEL/expire of one key stalls the server."
 ---
 
 # Redis Hot Keys and Big Keys
 
-Find hot/big keys safely and redesign access or sharding patterns without blocking production.
+## Use when
+- p99 spikes, `SLOWLOG` entries on O(N) commands, uneven memory or traffic across cluster nodes, or slow `DEL` of a large key.
 
-## Domain rules
-Assume production safety and latency matter. Prefer bounded SCAN/sampling; never use destructive global commands without explicit approval.
+## Diagnose first
+- `redis-cli SLOWLOG GET 20` and `LATENCY DOCTOR` (if latency monitoring is enabled).
+- `redis-cli --bigkeys` and `--memkeys` (they SCAN; run against a replica or off-peak). Confirm with `MEMORY USAGE key SAMPLES 0`, `HLEN/SCARD/ZCARD/LLEN`.
+- Hot keys: `redis-cli --hotkeys` requires an LFU `maxmemory-policy`; otherwise sample with `MONITOR` for seconds only (it is expensive) or use client-side counters.
+- `INFO commandstats` for the calls and usec per command.
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Big collection: shard by bucket (`key:{id % N}`), trim, or paginate with `SSCAN/HSCAN/ZRANGE` ranges instead of fetching everything.
+- Delete large keys with `UNLINK` (asynchronous free), and expire them progressively; avoid `DEL` on multi-million element keys.
+- Hot read key: local in-process cache with short TTL, or replicate the value across suffixed copies (`key:0..k`) and pick randomly.
+- Hot write counter: split into shards and sum on read, or batch increments.
+- Replace O(N) commands in request paths (`SMEMBERS`, `HGETALL`, `LRANGE 0 -1`) with bounded reads.
 
-## Focus checks
-- avoid KEYS.
-- use SCAN/sampling.
-- inspect command frequency.
-- split or rebalance only with measured need.
+## Anti-patterns
+- Running `--bigkeys` or `MONITOR` on a busy primary; fixing symptoms with bigger instances; unbounded lists and sets.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Do not `DEL`, `FLUSH*`, or rewrite a live big key without approval and a plan for readers during the change.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- `SLOWLOG` no longer shows the command, p99 back to baseline, distribution of memory/ops across nodes evened out, largest key size below the agreed cap.

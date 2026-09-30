@@ -1,35 +1,32 @@
 ---
 name: redis-cache-design
-description: "Design cache-aside/read-through patterns, TTLs, stampede control, and failure fallback. Use when work involves redis cache design."
+description: "Design Redis caches: key schema, TTLs, patterns and stampede protection. Use when adding or fixing a cache layer, hit rate is low, stale data is served, or expiry causes load spikes."
 ---
 
 # Redis Cache Design
 
-Design cache-aside/read-through patterns, TTLs, stampede control, and failure fallback.
+## Use when
+- Introducing caching for a slow read path, choosing TTLs, or debugging thundering herds and stale reads.
 
-## Domain rules
-Assume production safety and latency matter. Prefer bounded SCAN/sampling; never use destructive global commands without explicit approval.
+## Diagnose first
+- `redis-cli INFO stats | grep -E 'keyspace_(hits|misses)|expired_keys|evicted_keys'`: hit ratio = hits/(hits+misses).
+- `redis-cli INFO keyspace` and `INFO memory` (used vs `maxmemory`, `maxmemory_policy`).
+- Sample keys with `SCAN 0 MATCH prefix:* COUNT 100` (never `KEYS *` on production) and `TTL key` / `OBJECT FREQ` where available.
+- Measure the uncached path first: is the source really slow, and how often is each key read?
 
-## Workflow
-1. Inspect the repository/runtime version and existing conventions before proposing changes.
-2. Gather direct evidence relevant to this topic; do not infer from naming alone.
-3. State the failure mode or design goal in concrete terms.
-4. Make the smallest defensible change that addresses the root cause.
-5. Validate with the most targeted reliable checks, then broaden only when needed.
-6. Report evidence, changes, validation, remaining risk, and version-sensitive assumptions.
+## Decision rules
+- Default pattern is cache-aside: read cache, on miss load and `SET key val EX ttl`. Write-through/write-behind only with a clear consistency owner.
+- Key schema: `service:entity:id:version` with a stable prefix; put a schema version in the key so deployments can invalidate by changing it.
+- Always set a TTL with jitter (for example base +/- 10-20%) so keys do not expire together.
+- Stampede on hot key expiry: single-flight lock (`SET lock NX PX`), serve stale while one worker refreshes, or refresh ahead of expiry.
+- Cache negative results briefly to stop repeated misses for absent data.
+- Store compact values (ids, small JSON) rather than whole object graphs; big values raise latency and memory.
 
-## Focus checks
-- define consistency tolerance.
-- add jitter where appropriate.
-- prevent stampedes.
-- degrade safely when Redis is unavailable.
+## Anti-patterns
+- Caching without measuring; no TTL; unbounded key cardinality (per-user-per-filter permutations); caching errors as valid data; treating the cache as the source of truth.
 
-## Guardrails
-- Do not broaden the task into unrelated modernization.
-- Prefer measured evidence and repository-native tooling over generic advice.
-- Preserve public contracts unless the requested change requires otherwise.
-- For destructive, irreversible, privilege-changing, or production-disruptive actions, stop and request explicit approval.
-- If behavior depends on a library/database/runtime version, verify that version before relying on version-specific behavior.
+## Safety
+Never `FLUSHALL`/`FLUSHDB` or mass `DEL` on shared instances without approval; prefer targeted deletes and versioned keys. Key format changes must roll out compatibly across app versions.
 
-## Output expectation
-Return a concise engineering result: root cause or design decision, exact files/objects affected, commands/tests run, observed outcome, and remaining risks.
+## Verify
+- Hit ratio and origin load before/after; p95 latency of the endpoint; no synchronized expiry spikes; memory stays under limit at peak.
