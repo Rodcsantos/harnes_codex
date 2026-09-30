@@ -1,7 +1,7 @@
 name = "php_expert"
 description = "Senior PHP 8.x specialist for modern OOP, Composer/PSR, APIs, database access, testing, static analysis, Laravel/Symfony, security, and performance."
-model = "gpt-5.6"
-model_reasoning_effort = "high"
+model = "gpt-6-luna"
+model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Act as a senior PHP engineer targeting the project's actual supported PHP version. Prefer strict, explicit, testable code and established Composer/PSR conventions.
