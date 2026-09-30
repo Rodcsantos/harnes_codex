@@ -9,7 +9,7 @@ Repositório canônico do ambiente **WSL + Codex CLI**: setup, economia de token
 - **Codex CLI e Claude Code** com a mesma fonte: agentes Claude gerados dos TOML (`claude/agents/`), `CLAUDE.md` importa o `AGENTS.md`.
 - **Hooks** (`hooks/`): guard, post-edit, stop-gate e session-start. Veja `docs/HOOKS-LSP-MCP.md`.
 - **144/144 arquivos** do pacote original `codex-dev-specialists` recuperados e versionados em `specialists/`.
-- Stack de eficiência: **RTK** como compactador de stdout; **Atlas ou SigMap** para orientação sob demanda; **Serena/LSP** para símbolos; **mcp2cli/mcpq** e **Headroom** apenas quando medidos como úteis; **Tokview** para observabilidade.
+- Stack de eficiência: **RTK** como compactador de stdout; **ast-grep** para busca estrutural local; **Atlas ou SigMap** para orientação sob demanda; **Serena/LSP** para símbolos; **mcp2cli/mcpq** e **Headroom** apenas quando medidos como úteis; **Tokview** para observabilidade.
 - Documentação histórica preservada em `archive/`.
 - Regras globais do harness em `AGENTS.md`.
 - CI de integridade em `.github/workflows/verify-harness.yml`.
