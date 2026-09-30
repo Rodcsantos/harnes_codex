@@ -29,4 +29,4 @@ description: "Analyze MySQL InnoDB transactions, isolation, deadlocks and lock w
 Approval before `KILL` on a transaction (rollback of a big transaction can itself take long) and before changing isolation level or timeouts globally.
 
 ## Verify
-- Reproduce with two sessions or a test; after the fix, deadlock counter (`Innodb_deadlocks` or status output) stops rising, longest transaction age drops, and the retry path is covered by a test.
+- Reproduce with two sessions or a test; after the fix, `SELECT count FROM information_schema.INNODB_METRICS WHERE name='lock_deadlocks'` (enable the counter if needed) stops rising, longest transaction age drops, and the retry path is covered by a test.
